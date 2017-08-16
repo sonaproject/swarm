@@ -4,23 +4,21 @@ from synchronizers.swarm.swarmsyncstep import SwarmSyncStep
 from xos.logger import observer_logger as logger
 from synchronizers.new_base.modelaccessor import *
 
+import synchronizers.swarm.swarmlog as slog
+
 class SyncRoles(SwarmSyncStep):
     provides=[Role]
     requested_interval=0
     observes=[SiteRole,SliceRole,ControllerRole]
 
     def sync_record(self, role):
-        logger.info("role: %r" % role) 
-        logger.info("role.enacted: %s" % role.enacted) 
+        slog.info("role: %r" % role) 
+        slog.info("role.enacted: %s" % role.enacted) 
         if not role.enacted:
             controllers = Controller.objects.all()
-            logger.info("controllers: %s" % controllers) 
+            slog.info("controllers: %s" % controllers) 
             for controller in controllers:
-                logger.info("controller: %s" % controller)
-                '''
-                driver = self.driver.admin_driver(controller=controller)
-                driver.create_role(role.role)
-                '''
+                slog.info("controller: %s" % controller)
             role.save()
  
 

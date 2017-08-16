@@ -17,5 +17,4 @@ required_models:
   - Instance
   - ControllerSitePrivilege
   - ControllerSlicePrivilege
-##  - Port  ## FIXME
   - Role

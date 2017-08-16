@@ -1,4 +1,3 @@
-# FIXME this file needs a refactoring
 observer_disabled = False
 
 def EnableObserver(x):

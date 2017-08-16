@@ -5,31 +5,31 @@ class SlicePolicy(Policy):
     model_name = "Slice"
 
     def handle_create(self, slice):
-        self.logger.info("slice: %s" % str(slice))
+        self.logger.debug("slice: %s" % str(slice))
         return self.handle_update(slice)
 
     def handle_update(self, slice):
         support_nat_net = False # Assume we're using VTN rather than nat-net
 
-        self.logger.info("slice.id: %s" % str(self.logger.info))
+        self.logger.debug("slice.id: %s" % str(self.logger.info))
 
         controller_slices = ControllerSlice.objects.filter(slice_id=slice.id)
         existing_controllers = [cs.controller for cs in controller_slices]
         existing_controllers_ids = [x.id for x in existing_controllers]
 
-        self.logger.info("MODEL POLICY: slice existing_controllers=%s" % existing_controllers)
+        self.logger.debug("MODEL POLICY: slice existing_controllers=%s" % existing_controllers)
 
         all_controllers = Controller.objects.all()
         for controller in all_controllers:
             if controller.id not in existing_controllers_ids:
-                self.logger.info("MODEL POLICY: slice adding controller %s" % controller)
+                self.logger.debug("MODEL POLICY: slice adding controller %s" % controller)
                 sd = ControllerSlice(slice=slice, controller=controller)
                 sd.save()
 
         if slice.network in ["host", "bridged"]:
             # Host and Bridged docker containers need no networks and they will
             # only get in the way.
-            self.logger.info("MODEL POLICY: Skipping network creation")
+            self.logger.debug("MODEL POLICY: Skipping network creation")
         elif slice.network in ["noauto"]:
             # do nothing
             pass
@@ -58,7 +58,7 @@ class SlicePolicy(Policy):
                     nat_net.ports = slice.exposed_ports
                 nat_net.save()
                 public_nets.append(nat_net)
-                self.logger.info("MODEL POLICY: slice %s made nat-net" % slice)
+                self.logger.debug("MODEL POLICY: slice %s made nat-net" % slice)
 
             if not private_nets:
                 private_net = Network(
@@ -67,7 +67,7 @@ class SlicePolicy(Policy):
                     owner = slice
                 )
                 private_net.save()
-                self.logger.info("MODEL POLICY: slice %s made private net" % slice)
+                self.logger.debug("MODEL POLICY: slice %s made private net" % slice)
                 private_nets = [private_net]
             # create slice networks
             public_net_slice = None
@@ -86,21 +86,21 @@ class SlicePolicy(Policy):
             if support_nat_net and (not public_net_slice):
                 public_net_slice = NetworkSlice(slice=slice, network=public_nets[0])
                 public_net_slice.save()
-                self.logger.info("MODEL POLICY: slice %s made public_net_slice" % slice)
+                self.logger.debug("MODEL POLICY: slice %s made public_net_slice" % slice)
             if not private_net_slice:
                 private_net_slice = NetworkSlice(slice=slice, network=private_nets[0])
                 private_net_slice.save()
-                self.logger.info("MODEL POLICY: slice %s made private_net_slice" % slice)
+                self.logger.debug("MODEL POLICY: slice %s made private_net_slice" % slice)
 
     # TODO: This feels redundant with the reaper
     def handle_delete(slice):
-        self.logger.info("slice: %s" % str(slice))
+        self.logger.debug("slice: %s" % str(slice))
         public_nets = []
         private_net = None
         networks = Network.objects.filter(owner_id=slice.id)
 
         for n in networks:
-            self.logger.info("slice: %s    To delete network(%s)" % (str(slice), str(n)))
+            self.logger.debug("slice: %s    To delete network(%s)" % (str(slice), str(n)))
             n.delete()
 
         # Note that sliceprivileges and slicecontrollers are autodeleted, through the dependency graph

@@ -1,5 +1,5 @@
 ---
-## Template file: sync_controller_images.yaml
+# Template file: sync_controller_images.yaml
 
 - hosts: {{ swarm_manager_address }}
   become: true
@@ -25,11 +25,4 @@
     - name: Inspect a image
       docker_image_facts:
         name: {{ swarm_manager_address }}:{{ docker_registry_port }}/{{ image_name }}:{{ image_tag }}
-
-
-## andrew. 
-##  If you can not use docker_image module of ansible, then run following shll module
-#   - name: push docker image to private registry
-#     shell: docker push          {{ swarm_manager_address }}:{{ docker_registry_port }}/{{ image_name }}:{{ image_tag }}
-
 

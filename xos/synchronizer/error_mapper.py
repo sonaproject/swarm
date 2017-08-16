@@ -1,11 +1,8 @@
-from xos.logger import Logger, logging, logger
-
+from xos.logger import Logger, logging, logger 
 
 class ErrorMapper:
     def __init__(self, error_map_file):
-        self.error_map = {}
-
-        ## andrew   set default entry
+        self.error_map = {} 
         self.error_map['0'] = "ok"
         self.error_map['1'] = "processing"
 

@@ -4,8 +4,4 @@
 - hosts: {{ swarm_manager_address }}
   become: true 
   tasks:
-  {% if delete -%}
-    - shell: echo "delete flag={{ delete }}  login_user={{ admin_user }}"
-  {% else -%}
-    - shell: echo "create flag={{ delete }}  login_user={{ admin_user }}"
-  {% endif %}
+    - shell: echo "user={{ admin_user }}"

@@ -5,5 +5,5 @@
   become: true
   tasks:
     - name: Dummy action
-      shell: echo "name={{ name }}   admin_user={{ admin_user }}   role={{ role }}"
+      shell: echo "user={{ admin_user }}"
 

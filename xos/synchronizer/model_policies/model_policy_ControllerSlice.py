@@ -25,5 +25,7 @@ class ControllerSlicePolicy(Policy):
             controller_slice.slice.backend_register = controller_slice.backend_register
             fields+=['backend_register']
 
-        self.logger.info("controller_slice.backend_status[0]: %s    controller_slice.slice.backend_status[0]: %s    fields: %s" % (controller_slice.backend_status[0], controller_slice.slice.backend_status[0], str(fields)))
+        self.logger.info("controller_slice.backend_status       : %s" % controller_slice.backend_status[0])
+        self.logger.info("controller_slice.slice.backend_status : %s" % controller_slice.slice.backend_status[0])
+        self.logger.info("fields                                : %s" % str(fields))
         controller_slice.slice.save(update_fields = fields)

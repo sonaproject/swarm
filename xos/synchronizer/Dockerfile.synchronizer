@@ -1,8 +1,8 @@
 # xosproject/swarm-synchronizer
 FROM xosproject/xos-synchronizer-base:candidate 
 
-COPY . /opt/xos/synchronizers/swarm 
-COPY ansible.cfg    /etc/ansible/ansible.cfg 
+COPY  .  /opt/xos/synchronizers/swarm 
+COPY  ansible.cfg  /etc/ansible/ansible.cfg 
 
 RUN pip install docker 
 

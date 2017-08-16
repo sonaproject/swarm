@@ -9,7 +9,6 @@ services:
     image: xosproject/swarm-synchronizer
     networks:
       - xos
-    #command: bash -c "sleep 86400"
     volumes:
         - /opt/cord/build/platform-install/credentials/xosadmin@opencord.org:/opt/xos/services/swarm/credentials/xosadmin@opencord.org
     external_links: 

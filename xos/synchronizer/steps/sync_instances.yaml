@@ -6,6 +6,9 @@
     {% if delete -%}
     - name: delete swarm service '{{ swarm_service_name }}'
       shell: docker service rm  {{ swarm_service_name }}
+    {% elif duplicated -%}
+    - name: get status of '{{ swarm_service_name }}' service
+      shell: docker service ps {{ swarm_service_name }} 
     {% elif update -%}
     - name: update swarm service '{{ swarm_service_name }}'
       shell: docker service update  --force  {{ publish }}  {{ volume }} {{ swarm_service_name }}
