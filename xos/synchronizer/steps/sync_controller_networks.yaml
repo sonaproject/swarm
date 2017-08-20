@@ -27,7 +27,7 @@
     ##                               -o neutron.net.name=kuryr-net 
     ##                       kuryr-net
     - name: create a docker network '{{ network_name }}'
-      shell: docker network create --driver overlay  --subnet {{ subnet }}  --gateway {{ gateway }}  {{ network_name }}
+      shell: docker network create  {{ opt_driver }}  {{ opt_ipam_driver }}  {{ opt_subnet }}  {{ opt_gateway }}  {{ opt_ipam_neutron_opt }}  {{ network_name }}
     - name: network inspection '{{ network_name }}'
       shell: docker network inspect  {{ network_name }} 
     {% endif -%} 

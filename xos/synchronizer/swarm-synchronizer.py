@@ -11,8 +11,11 @@ config_file = os.path.abspath(os.path.dirname(os.path.realpath(__file__)) + '/sw
 Config.init(config_file, 'synchronizer-config-schema.yaml')
 
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "xos.settings")
+
+import threading 
 import time 
 import swarmlog as slog
+import swarm_monitor
 
 from synchronizers.new_base.modelaccessor import *
 from synchronizers.new_base.backend import Backend
@@ -40,6 +43,11 @@ def main():
 
     if (wait):
         time.sleep(5) # Safety factor, seeing that we stumbled waiting for the data model to come up.
+
+    # check network port on swarm cluster
+    slog.debug("swarm_monitor_thread starts")
+    monitor_thread = threading.Thread(target=swarm_monitor.monitor_thr, name="swarm_monitor_thread", args=(models_active,))
+    monitor_thread.start() 
 
     backend = Backend()
     backend.run()    

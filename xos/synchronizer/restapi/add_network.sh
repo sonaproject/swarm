@@ -8,9 +8,10 @@ DATA=$(cat <<EOF
     "subnet": "192.168.0.0/24", 
     "start_ip": "192.168.0.3",
     "end_ip": "192.168.0.20",
+    "labels": "kuryr-subnetpool",
     "permit_all_slices": true,
     "autoconnect": false,
-    "template": "http://10.10.2.240/api/core/networktemplates/5/",
+    "template": "http://10.10.2.240/api/core/networktemplates/6/",
     "owner": "http://10.10.2.240/api/core/slices/3/"
 }
 EOF

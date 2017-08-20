@@ -70,8 +70,8 @@ class SyncControllerNetworks(SwarmSyncStep):
 
     def save_controller_network(self, controller_network):
         network_name = controller_network.network.name 
-        subnet_name = '%s-%d'%(network_name,controller_network.pk)
-        slog.info("network_name: %s    subnet_name: %s" % (network_name, subnet_name))
+        #subnet_name = '%s-%d'%(network_name, controller_network.pk)
+        #slog.info("network_name: %s    subnet_name: %s" % (network_name, subnet_name))
         if controller_network.subnet and controller_network.subnet.strip():
             # If a subnet is already specified (pass in by the creator), then
             # use that rather than auto-generating one.
@@ -97,6 +97,19 @@ class SyncControllerNetworks(SwarmSyncStep):
 
         controller_network.gateway = self.alloc_gateway(cidr)
 
+        opt_driver = "--driver=overlay" # default driver for swarm
+        opt_ipam_driver = " "
+        opt_ipam_neutron_opt = " "
+        if controller_network.network.template.shared_network_name is not None:
+            if len(controller_network.network.template.shared_network_name) > 1:
+                opt_driver = "--driver=%s" % controller_network.network.template.shared_network_name
+                opt_ipam_driver = "--ipam-driver=%s" % controller_network.network.template.shared_network_name
+                opt_ipam_neutron_opt = "--ipam-opt=neutron.pool.name=%s  -o neutron.pool.name=%s  -o neutron.net.name=%s" % (
+                                        controller_network.network.labels, 
+                                        controller_network.network.labels, 
+                                        controller_network.network.name)
+
+
         swarm_manager_url = controller_network.controller.auth_url
         (swarm_manager_address, docker_registry_port) = swarm_manager_url.split(':')
         slog.info("swarm_manager_address: %s    docker_registry_port: %s" % 
@@ -107,18 +120,21 @@ class SyncControllerNetworks(SwarmSyncStep):
 
         network_fields = {
                             'swarm_manager_address' : swarm_manager_address,
-                            'network_name':network_name,
-                            'subnet_name':subnet_name, # TODO  neutron.pool.name for kuryr
-                            'ansible_tag':'%s-%s@%s'%(
+                            'network_name': network_name,
+                            #'subnet_name': subnet_name,
+                            'ansible_tag': '%s-%s@%s'%(
                                                     network_name,
                                                     slice.slicename,
                                                     controller_network.controller.name),
-                            'subnet':cidr,
-                            'gateway': controller_network.gateway,
-                            'start_ip':start_ip,
-                            'end_ip':end_ip,
-                            'duplicated':duplicated_flag,
-                            'delete':False
+                            'opt_driver': opt_driver,
+                            'opt_ipam_driver': opt_ipam_driver,
+                            'opt_ipam_neutron_opt': opt_ipam_neutron_opt,
+                            'opt_subnet': "--subnet=%s" % cidr,
+                            'opt_gateway': "--gateway=%s" % controller_network.gateway,
+                            'start_ip': start_ip,
+                            'end_ip': end_ip,
+                            'duplicated': duplicated_flag,
+                            'delete': False
                             } 
         slog.info("network_fields: %s" % network_fields) 
 
@@ -169,7 +185,7 @@ class SyncControllerNetworks(SwarmSyncStep):
             raise Exception('Could not get slice for Network %s' % controller_network.network.name)
 
         network_name = controller_network.network.name
-        subnet_name = '%s-%d'%(network_name,controller_network.pk)
+        #subnet_name = '%s-%d'%(network_name,controller_network.pk)
         cidr = controller_network.subnet
         network_fields = {
                         'network_name':network_name,

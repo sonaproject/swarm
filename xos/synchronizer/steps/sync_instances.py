@@ -148,6 +148,18 @@ class SyncInstances(SwarmSyncStep):
 
     def map_sync_inputs(self, instance): 
         slog.debug("instance: %s    slice: %s" % (instance, instance.slice.name))
+        
+        controller = instance.node.site_deployment.controller 
+        swarm_manager_url = controller.auth_url
+        slog.info("swarm_manager_url: %s" % swarm_manager_url)
+        (swarm_manager_address, docker_registry_port) = swarm_manager_url.split(':')
+        slog.info("swarm_manager_address: %s    docker_registry_port: %s" % (
+                    swarm_manager_address, docker_registry_port)) 
+
+        # check if this service is created already on swarm cluster.
+        duplicated_flag = self.chk_svc_exist(instance, swarm_manager_address)
+        if duplicated_flag is True:
+            swarm_service_update_flag = True 
 
         ## if instance.instance_uuid is not None, 
         ## then This method will update the instance with new configuration.
@@ -253,18 +265,6 @@ class SyncInstances(SwarmSyncStep):
         slog.info("instance.slice.name: %s    instance.id: %s    instance_name: %s" % (
                     instance.slice.name, instance.id, instance_name))
         self.instance_name = instance_name
-
-        controller = instance.node.site_deployment.controller 
-        swarm_manager_url = controller.auth_url
-        slog.info("swarm_manager_url: %s" % swarm_manager_url)
-        (swarm_manager_address, docker_registry_port) = swarm_manager_url.split(':')
-        slog.info("swarm_manager_address: %s    docker_registry_port: %s" % (
-                    swarm_manager_address, docker_registry_port))
-
-        # check if this service is created already on swarm cluster.
-        duplicated_flag = self.chk_svc_exist(instance, swarm_manager_address)
-        if duplicated_flag is True:
-            swarm_service_update_flag = True
 
         input_fields = {
                         'swarm_manager_address' : swarm_manager_address,
