@@ -16,4 +16,4 @@ add_network.sh            # new kuryr network
 
 # Create LB Service
 Please read LBaaS REST API Documents (README.md)
-
+  https://github.com/sonaproject/lbaas/blob/master/xos/restapi_lbaas/README.md
