@@ -83,8 +83,12 @@ class SyncControllerNetworks(SwarmSyncStep):
 
         if controller_network.network.start_ip and controller_network.network.start_ip.strip():
             start_ip = controller_network.network.start_ip.strip()
+            # FIXME: this assignment(gateway=start_ip) is temporary code.
+            #        I would add a attribute gateway on core_network model.
+            controller_network.gateway = start_ip  
         else:
             start_ip = None
+            controller_network.gateway = self.alloc_gateway(cidr)
 
         if controller_network.network.end_ip and controller_network.network.end_ip.strip():
             end_ip = controller_network.network.end_ip.strip()
@@ -95,18 +99,18 @@ class SyncControllerNetworks(SwarmSyncStep):
         self.cidr=cidr
         slice = controller_network.network.owner
 
-        controller_network.gateway = self.alloc_gateway(cidr)
 
         opt_driver = "--driver=overlay" # default driver for swarm
         opt_ipam_driver = " "
         opt_ipam_neutron_opt = " "
         if controller_network.network.template.shared_network_name is not None:
             if len(controller_network.network.template.shared_network_name) > 1:
+            if controller_network.network.template.shared_network_name.__contains__("kuryr"):
                 opt_driver = "--driver=%s" % controller_network.network.template.shared_network_name
                 opt_ipam_driver = "--ipam-driver=%s" % controller_network.network.template.shared_network_name
-                opt_ipam_neutron_opt = "--ipam-opt=neutron.pool.name=%s  -o neutron.pool.name=%s  -o neutron.net.name=%s" % (
-                                        controller_network.network.labels, 
-                                        controller_network.network.labels, 
+                opt_ipam_neutron_opt = "--ipam-opt=neutron.pool.uuid=%s  -o neutron.pool.uuid=%s  -o neutron.net.uuid=%s" % (
+                                        controller_network.network.labels,
+                                        controller_network.network.labels,
                                         controller_network.network.name)
 
 
