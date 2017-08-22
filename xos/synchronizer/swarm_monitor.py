@@ -112,8 +112,8 @@ def monitor_thr(models_active):
                     new_port.network_id  = network.id
                     new_port.save() 
         except Exception as ex:
-            slog.error("Exception: type(%s)   %s" % (type(ex), ex.args))
-            slog.error("Exception: %s" % str(ex))
+            slog.error("Exception: %s   %s" % (type(ex), ex.args))
+            # slog.error("Exception: %s" % str(ex))
             # TODO  check DockerClient is disconnected or expired.
             my_client = docker.DockerClient(base_url=docker_api_base_url)
 

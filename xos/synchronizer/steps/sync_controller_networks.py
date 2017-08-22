@@ -104,15 +104,13 @@ class SyncControllerNetworks(SwarmSyncStep):
         opt_ipam_driver = " "
         opt_ipam_neutron_opt = " "
         if controller_network.network.template.shared_network_name is not None:
-            if len(controller_network.network.template.shared_network_name) > 1:
             if controller_network.network.template.shared_network_name.__contains__("kuryr"):
                 opt_driver = "--driver=%s" % controller_network.network.template.shared_network_name
                 opt_ipam_driver = "--ipam-driver=%s" % controller_network.network.template.shared_network_name
-                opt_ipam_neutron_opt = "--ipam-opt=neutron.pool.uuid=%s  -o neutron.pool.uuid=%s  -o neutron.net.uuid=%s" % (
+                opt_ipam_neutron_opt = "--ipam-opt=neutron.pool.uuid=%s  -o neutron.pool.uuid=%s  -o neutron.net.name=%s" % (
                                         controller_network.network.labels,
                                         controller_network.network.labels,
                                         controller_network.network.name)
-
 
         swarm_manager_url = controller_network.controller.auth_url
         (swarm_manager_address, docker_registry_port) = swarm_manager_url.split(':')
