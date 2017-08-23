@@ -42,8 +42,8 @@ class SyncInstances(SwarmSyncStep):
             volume_mount_opt = "--mount-add type=bind,src=/opt/xos/instance_volume/%s,dst=%s" % (new_inst.id, new_inst.volumes)
 
             ## DOCKER SERVICE UPDATE
-            ssh_cmd = "ssh root@%s   docker service update  --force  %s  %s  %s" % (
-                        swarm_manager_address,  new_inst.userData, volume_mount_opt, new_inst.instance_name)
+            ssh_cmd = "ssh root@%s   docker service update  --force  %s  %s" % (
+                        swarm_manager_address,  volume_mount_opt, new_inst.instance_name)
             slog.debug("SSH CMD: %s" % ssh_cmd) 
             popen = subprocess.Popen(ssh_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
             (stdoutdata, stderrdata) = popen.communicate() 
@@ -79,10 +79,9 @@ class SyncInstances(SwarmSyncStep):
                     old_update = new_inst.updated
                 slog.debug("[THREAD] updated(old)     : %s" % time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime(old_update)))
 
-                if (new_inst.userData is not None) and (new_inst.volumes is not None) and (new_inst.instance_name is not None):
-                    if (len(new_inst.userData) > 2) and (len(new_inst.volumes) > 2) and  (len(new_inst.instance_name) > 2):
+                if (new_inst.volumes is not None) and (new_inst.instance_name is not None):
+                    if (len(new_inst.volumes) > 2) and  (len(new_inst.instance_name) > 2):
                         slog.debug("[THREAD] instance_name    : %s  (%s)" % (new_inst.instance_name, len(new_inst.instance_name)))
-                        slog.debug("[THREAD] userData         : %s  (%s)" % (new_inst.userData,      len(new_inst.userData)))
                         slog.debug("[THREAD] volumes          : %s  (%s)" % (new_inst.volumes ,      len(new_inst.volumes )))
 
                         if idx == 1:
@@ -190,11 +189,6 @@ class SyncInstances(SwarmSyncStep):
                                 instance.id, instance.volumes) 
         slog.debug("volume_mount_opt: %s" % volume_mount_opt)
 
-        ## set option for port_publish 
-        port_publish = " "
-        if swarm_service_update_flag is True:
-            port_publish = instance.userData
-
         # sanity check - make sure model_policy for slice has run
         if ((not instance.slice.policed) or (instance.slice.policed < instance.slice.updated)):
             slog.info("Instance %s waiting on Slice %s to execute model policies" % (
@@ -272,7 +266,6 @@ class SyncInstances(SwarmSyncStep):
                         'network_name'          : swarm_network,
                         'replicas'              : "--replicas 1",              ## default value
                         'restart_condition'     : "--restart-condition on-failure",  ## default value
-                        'publish'               : port_publish,
                         'volume'                : volume_mount_opt,
                         'docker_registry_port'  : docker_registry_port,
                         'image_name'            : instance.image.name,
