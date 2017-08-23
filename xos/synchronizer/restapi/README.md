@@ -10,8 +10,10 @@ lb-test   # To create new service, slice
 Run following shell script:
 (This example script uses REST API)
 ```
+# add_slice_kuryr-net.sh    # new slice for kuryr network
 add_networktemplate.sh    # new network template with kuryr network plug-in
 add_network.sh            # new kuryr network
+# add_networkslice.sh   # Temporary
 ```
 
 # Create LB Service

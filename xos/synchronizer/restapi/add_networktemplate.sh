@@ -5,7 +5,7 @@ source ./config.sh
 DATA=$(cat <<EOF 
 { 
     "name": "kuryr_template",
-    "description": "kuryr_template for sona",
+    "description": "kuryr_template for sona 08-23 09:52",
     "visibility": "private",
     "translation": "none",
     "access": null,

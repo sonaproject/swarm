@@ -144,8 +144,21 @@ class SyncControllerNetworks(SwarmSyncStep):
 
     def map_sync_inputs(self, controller_network):
         # make sure to not sync a shared network
+        slog.debug("controller_network: %s" % str(controller_network))
+        slog.debug("controller_network.subnet: %s" % controller_network.subnet)
+        slog.debug("controller_network.network_id: %s" % controller_network.network_id)
+        slog.debug("controller_network.network.name: %s" % controller_network.network.name)
+
+        slog.debug("controller_network.network.template.shared_network_name: %s" % controller_network.network.template.shared_network_name)
+        slog.debug("controller_network.network.template.shared_network_id  : %s" % controller_network.network.template.shared_network_id)
+
+        ## TODO: shared_network_name | kuryr/libnetwork2:latest --> then, skip following if-statement.
         if (controller_network.network.template.shared_network_name or controller_network.network.template.shared_network_id):
-            return SyncStep.SYNC_WITHOUT_RUNNING
+            if controller_network.network.template.shared_network_name.__contains__("kuryr"):
+                slog.debug("This is kuryr network")
+            else:
+                slog.debug("SyncStep.SYNC_WITHOUT_RUNNING: %s" % str(SyncStep.SYNC_WITHOUT_RUNNING))
+                return SyncStep.SYNC_WITHOUT_RUNNING
 
         slog.debug("network owner: %s    creator: %s" % (
                     controller_network.network.owner, 

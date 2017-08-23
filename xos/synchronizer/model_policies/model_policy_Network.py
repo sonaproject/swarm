@@ -10,13 +10,17 @@ class NetworkPolicy(Policy):
         return self.handle_update(network)
 
     def handle_update(self, network):
-        self.logger.debug("network: %s" % str(network))
+        self.logger.debug("model_policy_Network.py  network: %s  id: %s" % (str(network), network.id))
 
         expected_controllers =  Controller.objects.all()
-        self.logger.debug("Controller: %s" % str(expected_controllers) )
+        self.logger.debug("model_policy_Network.py  All Controllers: %s" % str(expected_controllers))
 
         existing_controllers = []
         for cn in ControllerNetwork.objects.all():
+            self.logger.debug("controllernetwork.id: %s   name: %s" % (cn.id, cn.subnet))
+            self.logger.debug("controllernetwork.network.id: %s" % cn.network.id)
+            self.logger.debug("controllernetwork.network_id: %s" % cn.network_id)
+            self.logger.debug("network.name: %s    network.id: %s" % (network.name, network.id))
             if cn.network.id == network.id:
                 existing_controllers.append(cn.controller)
 
