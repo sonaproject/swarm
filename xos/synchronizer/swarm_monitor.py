@@ -15,12 +15,12 @@ def search_instance(container_name):
     try:
         instance_list = Instance.objects.all()
         for instance in instance_list:
-            slog.debug("container_name: %s    service_name: %s" % (container_name, instance.name))
-            if container_name.__contains__(instance.name):
-                slog.debug("%s contains %s" % (container_name, instance.name))
-                str_idx = container_name.find(instance.name)
+            slog.debug("container_name: %s    service_name: %s" % (container_name, instance.instance_name))
+            if container_name.__contains__(instance.instance_name):
+                slog.debug("%s contains %s" % (container_name, instance.instance_name))
+                str_idx = container_name.find(instance.instance_name)
                 if str_idx == 0:  # If matching offset is 0.
-                    slog.debug("Matched record (%s, %s)" % (container_name, instance.name,))
+                    slog.debug("Matched record (%s, %s)" % (container_name, instance.instance_name))
                     return instance
         slog.debug("There is no instance tuple on XOS DB")
         return None
@@ -106,30 +106,22 @@ def monitor_thr(models_active):
                             slog.debug("%s is not container which is created by XOS" % container["Name"])
                             continue
 
-                        slog.debug("1")
-                        slog.debug("instance name: %s   instance_id: %s   network_id: %s" % (instance.name, instance.id, network.id))
-                        slog.debug("2")
+                        slog.debug("instance name: %s   instance_id: %s   network_id: %s" % (instance.instance_name, instance.id, network.id))
                         # To insert port tuple on core_port model 
                         new_port = Port()
-                        slog.debug("Make new element on core_port table")
                         new_port.ip      = ip_addr
                         new_port.mac     = container["MacAddress"]
-                        slog.debug("2.1")
                         new_port.port_id = container["EndpointID"]
-                        slog.debug("2.2")
                         new_port.leaf_model_name = "Port"
                         new_port.xos_created = True
-                        slog.debug("3")
                         new_port.instance_id = instance.id
-                        slog.debug("4")
                         new_port.network_id  = network.id
-                        slog.debug("5")
                         new_port.save() 
                         slog.debug("new port information is saved: %s" % new_port.ip)
                 except Exception as ex:
                     slog.error("Exception: %s   %s" % (type(ex), ex.args)) 
         except Exception as ex:
-            slog.error("Exception: %s   %s" % (type(ex), ex.args))
+            slog.error("Exception: %s   %s  %s" % (type(ex), str(ex), ex.args))
             # reconnect to docker api server on swarm manager node
             my_client = docker.DockerClient(base_url=docker_api_base_url)
 
