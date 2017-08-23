@@ -77,40 +77,44 @@ def monitor_thr(models_active):
             # To extract network list from core_network model  
             network_list = Network.objects.all()
             for network in network_list:
-                # To get docker network information from swarm manager
-                slog.debug("network.name: %s" % network.name)
-                docker_net = my_client.networks.get(network.name)
-                container_list = docker_net.attrs['Containers'].values()
+                try: 
+                    # To get docker network information from swarm manager
+                    slog.debug("network.name: %s" % network.name)
+                    docker_net = my_client.networks.get(network.name)
+                    container_list = docker_net.attrs['Containers'].values()
 
-                # To extract ip address and container name which uses its network
-                for container in container_list:
-                    slog.debug("Container name: %s" % container["Name"])
-                    slog.debug("IPv4          : %s" % container["IPv4Address"])
-                    slog.debug("MAC           : %s" % container["MacAddress"])
-                    slog.debug("EndpointID    : %s" % container["EndpointID"])
+                    # To extract ip address and container name which uses its network
+                    for container in container_list:
+                        slog.debug("Container name: %s" % container["Name"])
+                        slog.debug("IPv4          : %s" % container["IPv4Address"])
+                        slog.debug("MAC           : %s" % container["MacAddress"])
+                        slog.debug("EndpointID    : %s" % container["EndpointID"])
 
-                    ip_addr = transform_ip_addr(container["IPv4Address"])
-                    # Check if same port tuple is on core_port.
-                    port_info = search_port(ip_addr) 
-                    if port_info is not None: # port already exists, nothing to do.
-                        continue 
+                        ip_addr = transform_ip_addr(container["IPv4Address"])
+                        # Check if same port tuple is on core_port.
+                        port_info = search_port(ip_addr) 
+                        if port_info is not None: # port already exists, nothing to do.
+                            continue 
 
-                    # To search instance name with container["Name"]
-                    instance = search_instance(container["Name"])
-                    if instance is None:
-                        slog.debug("%s is not container which is created by XOS" % container["Name"])
-                        continue
+                        # To search instance name with container["Name"]
+                        instance = search_instance(container["Name"])
+                        if instance is None:
+                            slog.debug("%s is not container which is created by XOS" % container["Name"])
+                            continue
 
-                    # To insert port tuple on core_port model 
-                    new_port = Port()
-                    new_port.ip      = ip_addr
-                    new_port.mac     = container["MacAddress"]
-                    new_port.port_id = container["EndpointID"]
-                    new_port.leaf_model_name = "Port"
-                    new_port.xos_created = True
-                    new_port.instance_id = instance.id
-                    new_port.network_id  = network.id
-                    new_port.save() 
+                        # To insert port tuple on core_port model 
+                        new_port = Port()
+                        new_port.ip      = ip_addr
+                        new_port.mac     = container["MacAddress"]
+                        new_port.port_id = container["EndpointID"]
+                        new_port.leaf_model_name = "Port"
+                        new_port.xos_created = True
+                        new_port.instance_id = instance.id
+                        new_port.network_id  = network.id
+                        new_port.save() 
+                except Exception as ex:
+                    slog.error("Exception: %s   %s" % (type(ex), ex.args))
+
         except Exception as ex:
             slog.error("Exception: %s   %s" % (type(ex), ex.args))
             # slog.error("Exception: %s" % str(ex))
