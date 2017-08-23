@@ -106,16 +106,24 @@ def monitor_thr(models_active):
                             slog.debug("%s is not container which is created by XOS" % container["Name"])
                             continue
 
-                        slog.debug("instance: %s" % instance.name)
+                        slog.debug("1")
+                        slog.debug("instance name: %s   instance_id: %s   network_id: %s" % (instance.name, instance.id, network.id))
+                        slog.debug("2")
                         # To insert port tuple on core_port model 
                         new_port = Port()
+                        slog.debug("Make new element on core_port table")
                         new_port.ip      = ip_addr
                         new_port.mac     = container["MacAddress"]
+                        slog.debug("2.1")
                         new_port.port_id = container["EndpointID"]
+                        slog.debug("2.2")
                         new_port.leaf_model_name = "Port"
                         new_port.xos_created = True
+                        slog.debug("3")
                         new_port.instance_id = instance.id
+                        slog.debug("4")
                         new_port.network_id  = network.id
+                        slog.debug("5")
                         new_port.save() 
                         slog.debug("new port information is saved: %s" % new_port.ip)
                 except Exception as ex:
