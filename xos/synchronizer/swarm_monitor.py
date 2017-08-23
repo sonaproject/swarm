@@ -12,31 +12,36 @@ import docker
 
 
 def search_instance(container_name):
-    instance_list = Instance.objects.all()
-    for instance in instance_list:
-        slog.debug("container_name: %s    service_name: %s" % (container_name, instance.name))
-        if container_name.__contains__(instance.name):
-            slog.debug("%s contains %s" % (container_name, instance.name))
-            str_idx = container_name.find(instance.name)
-            if str_idx == 0:  # If matching offset is 0.
-                return instance
-    slog.debug("There is no instance tuple on XOS DB")
-    return None
+    try:
+        instance_list = Instance.objects.all()
+        for instance in instance_list:
+            slog.debug("container_name: %s    service_name: %s" % (container_name, instance.name))
+            if container_name.__contains__(instance.name):
+                slog.debug("%s contains %s" % (container_name, instance.name))
+                str_idx = container_name.find(instance.name)
+                if str_idx == 0:  # If matching offset is 0.
+                    slog.debug("Matched record (%s, %s)" % (container_name, instance.name,))
+                    return instance
+        slog.debug("There is no instance tuple on XOS DB")
+        return None
+    except Exception as ex:
+        slog.error("Exception: type(%s)   %s" % (type(ex), ex.args))
+        return None
+
 
 
 def search_port(ip_address):
     try:
         slog.debug("container ip_address: %s" % ip_address)
-        port = Port.objects.get(ip=ip_address)
-        slog.debug("port object: %s" % str(port))
-        if port is None:
+        port = Port.objects.filter(ip=ip_address)
+        slog.debug("port object count: %s" % port.count())
+        if port.count() == 0:
             slog.debug("%s does not exist, I would create new port tuple" % ip_address)
             return None
-        slog.debug("%s(%s) already exists, I have nothing to do" % (port.ip, port.mac))
-        return port
+        slog.debug("%s(%s) already exists, I have nothing to do" % (port[0].ip, port[0].mac))
+        return port[0]
     except Exception as ex:
         slog.error("Exception: type(%s)   %s" % (type(ex), ex.args))
-        slog.error("Exception: %s" % str(ex))
         return None
 
 
@@ -60,7 +65,6 @@ def transform_ip_addr(cidr):
         return ip_addr[0]
     except Exception as ex:
         slog.error("Exception: type(%s)   %s" % (type(ex), ex.args))
-        slog.error("Exception: %s" % str(ex))
         return None 
    
 
@@ -92,7 +96,7 @@ def monitor_thr(models_active):
 
                         ip_addr = transform_ip_addr(container["IPv4Address"])
                         # Check if same port tuple is on core_port.
-                        port_info = search_port(ip_addr) 
+                        port_info = search_port(ip_addr)
                         if port_info is not None: # port already exists, nothing to do.
                             continue 
 
@@ -102,6 +106,7 @@ def monitor_thr(models_active):
                             slog.debug("%s is not container which is created by XOS" % container["Name"])
                             continue
 
+                        slog.debug("instance: %s" % instance.name)
                         # To insert port tuple on core_port model 
                         new_port = Port()
                         new_port.ip      = ip_addr
@@ -112,13 +117,12 @@ def monitor_thr(models_active):
                         new_port.instance_id = instance.id
                         new_port.network_id  = network.id
                         new_port.save() 
+                        slog.debug("new port information is saved: %s" % new_port.ip)
                 except Exception as ex:
-                    slog.error("Exception: %s   %s" % (type(ex), ex.args))
-
+                    slog.error("Exception: %s   %s" % (type(ex), ex.args)) 
         except Exception as ex:
             slog.error("Exception: %s   %s" % (type(ex), ex.args))
-            # slog.error("Exception: %s" % str(ex))
-            # TODO  check DockerClient is disconnected or expired.
+            # reconnect to docker api server on swarm manager node
             my_client = docker.DockerClient(base_url=docker_api_base_url)
 
         time.sleep(5)
