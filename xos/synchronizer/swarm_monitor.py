@@ -34,8 +34,8 @@ def search_port(ip_address):
     try:
         slog.debug("container ip_address: %s" % ip_address)
         port = Port.objects.filter(ip=ip_address)
-        slog.debug("port object count: %s" % port.count())
-        if port.count() == 0:
+        slog.debug("port object count: %s" % len(port))
+        if len(port) == 0:
             slog.debug("%s does not exist, I would create new port tuple" % ip_address)
             return None
         slog.debug("%s(%s) already exists, I have nothing to do" % (port[0].ip, port[0].mac))
