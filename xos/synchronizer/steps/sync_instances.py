@@ -199,8 +199,11 @@ class SyncInstances(SwarmSyncStep):
                         instance, instance.slice.name))
 
         # sanity check - make sure model_policy for all slice networks have run
+        networks = instance.slice.ownedNetworks.all()
+        slog.debug("[AA] network list: %s" % str(networks))
+
         for network in instance.slice.ownedNetworks.all():
-            slog.info("network of slice: %s" % network)
+            slog.info("instance: %s   network of slice: %s" % (instance.name, network.name, instance.slice.name))
             if ((not network.policed) or (network.policed < network.updated)):
                 slog.info("Instance %s waiting on Network %s to execute model policies" % (
                             instance, network.name))
@@ -229,15 +232,13 @@ class SyncInstances(SwarmSyncStep):
         """
         networks = [ns.network for ns in NetworkSlice.objects.filter(slice_id=instance.slice.id) if
                     ns.network.id not in existing_port_network_ids]
-        """
-        networks = [ns.network for ns in NetworkSlice.objects.filter(slice_id=instance.slice.id)]
-        slog.debug("networks in NetworkSlice: %s" % networks)
         networks_ids = [x.id for x in networks]
         slog.debug("networks id list: %s" % str(networks_ids))
         controller_networks = ControllerNetwork.objects.filter(
                                                 controller_id=instance.node.site_deployment.controller.id)
         controller_networks = [x for x in controller_networks if x.id in networks_ids]
         slog.debug("controller_network list: %s" % str(controller_networks))
+        """
 
         swarm_network = ""
         for network in networks:
