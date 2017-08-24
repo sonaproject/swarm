@@ -129,11 +129,12 @@ class SyncInstances(SwarmSyncStep):
             slog.debug("swarm_svc.name   : %s" % swarm_svc.name)
             slog.debug("swarm_svc.attrs  : %s" % swarm_svc.attrs)
         except Exception as ex:
-            slog.debug("Exception: %s" % str(ex.args))
-            slog.debug("Exception: %s" % str(ex))
-            duplicated_flag = False  # There is no same service.
+            slog.debug("Exception: [%s] [%s]" % (str(ex.args), str(ex)))
+            slog.info("There is no duplicated service name, I would create new service (%s)" % instance_name)
+            duplicated_flag = False 
         else:
-            duplicated_flag = True   # There is same service.
+            slog.info("There is duplicated service name (%s)" % instance_name)
+            duplicated_flag = True
         return duplicated_flag 
 
 
@@ -199,7 +200,7 @@ class SyncInstances(SwarmSyncStep):
 
         # sanity check - make sure model_policy for all slice networks have run
         for network in instance.slice.ownedNetworks.all():
-            slog.info("network: %s" % network)
+            slog.info("network of slice: %s" % network)
             if ((not network.policed) or (network.policed < network.updated)):
                 slog.info("Instance %s waiting on Network %s to execute model policies" % (
                             instance, network.name))
@@ -207,26 +208,34 @@ class SyncInstances(SwarmSyncStep):
                     "Instance %s waiting on Network %s to execute model policies" % (
                             instance, network.name))
 
+        slog.debug("Model Policy checking is done successfully.")
+
         nics = []
 
         # handle ports the were created by the user
+        """
         for port in Port.objects.filter(instance_id=instance.id):
             slog.debug("Port.port_id: %s" % port.port_id)
             if not port.port_id:
                 raise DeferredException("Instance %s waiting on port %s" % (instance, port))
             nics.append({"kind": "port", "value": port.port_id, "network": port.network})
+        """
 
         # we want to exclude from 'nics' any network that already has a Port
-        existing_port_networks = [port.network for port in Port.objects.filter(instance_id=instance.id)]
-        existing_port_network_ids = [x.id for x in existing_port_networks]
-        slog.debug("existing_port_network_id list: %s" % str(existing_port_network_ids))
+        # existing_port_networks = [port.network for port in Port.objects.filter(instance_id=instance.id)]
+        # existing_port_network_ids = [x.id for x in existing_port_networks]
+        # slog.debug("existing_port_network_id list: %s" % str(existing_port_network_ids))
 
+        """
         networks = [ns.network for ns in NetworkSlice.objects.filter(slice_id=instance.slice.id) if
                     ns.network.id not in existing_port_network_ids]
+        """
+        networks = [ns.network for ns in NetworkSlice.objects.filter(slice_id=instance.slice.id)]
+        slog.debug("networks in NetworkSlice: %s" % networks)
         networks_ids = [x.id for x in networks]
         slog.debug("networks id list: %s" % str(networks_ids))
         controller_networks = ControllerNetwork.objects.filter(
-            controller_id=instance.node.site_deployment.controller.id)
+                                                controller_id=instance.node.site_deployment.controller.id)
         controller_networks = [x for x in controller_networks if x.id in networks_ids]
         slog.debug("controller_network list: %s" % str(controller_networks))
 

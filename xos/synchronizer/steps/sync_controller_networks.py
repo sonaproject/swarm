@@ -152,7 +152,7 @@ class SyncControllerNetworks(SwarmSyncStep):
         slog.debug("controller_network.network.template.shared_network_name: %s" % controller_network.network.template.shared_network_name)
         slog.debug("controller_network.network.template.shared_network_id  : %s" % controller_network.network.template.shared_network_id)
 
-        ## TODO: shared_network_name | kuryr/libnetwork2:latest --> then, skip following if-statement.
+        # If shared_network_name is kuryr/libnetwork2:latest --> then, discard following if-statement.
         if (controller_network.network.template.shared_network_name or controller_network.network.template.shared_network_id):
             if controller_network.network.template.shared_network_name.__contains__("kuryr"):
                 slog.debug("This is kuryr network")

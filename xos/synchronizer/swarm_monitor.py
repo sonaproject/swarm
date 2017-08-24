@@ -2,11 +2,12 @@ import os
 import base64
 import json
 import time
+import sys, traceback
 
 from xos.logger import observer_logger as logger
 from synchronizers.new_base.modelaccessor import *
 
-import synchronizers.swarm.swarmlog as slog
+import synchronizers.swarm.swarmlog as slog 
 
 import docker 
 
@@ -25,7 +26,8 @@ def search_instance(container_name):
         slog.debug("There is no instance tuple on XOS DB")
         return None
     except Exception as ex:
-        slog.error("Exception: type(%s)   %s" % (type(ex), ex.args))
+        slog.error("Exception: %s   %s   %s" % (type(ex), str(ex), ex.args))
+        slog.error("%s" % str(traceback.format_exc()))
         return None
 
 
@@ -41,21 +43,26 @@ def search_port(ip_address):
         slog.debug("%s(%s) already exists, I have nothing to do" % (port[0].ip, port[0].mac))
         return port[0]
     except Exception as ex:
-        slog.error("Exception: type(%s)   %s" % (type(ex), ex.args))
+        slog.error("Exception: %s   %s   %s" % (type(ex), str(ex), ex.args))
+        slog.error("%s" % str(traceback.format_exc()))
         return None
 
 
 def get_swarm_manager_address():
-    controller = Controller.objects.get(backend_type="Swarm")
-    if controller is None:
-        controller = Controller.objects.first()
-    swarm_manager_url = controller.auth_url
-    slog.info("swarm_manager_url: %s" % swarm_manager_url)
-    (swarm_manager_address, docker_registry_port) = swarm_manager_url.split(':')
-    slog.info("swarm_manager_address: %s    docker_registry_port: %s" % (
-                swarm_manager_address, docker_registry_port)) 
-    return swarm_manager_address
-
+    try:
+        controller = Controller.objects.get(backend_type="Swarm")
+        if controller is None:
+            controller = Controller.objects.first()
+        swarm_manager_url = controller.auth_url
+        slog.info("swarm_manager_url: %s" % swarm_manager_url)
+        (swarm_manager_address, docker_registry_port) = swarm_manager_url.split(':')
+        slog.info("swarm_manager_address: %s    docker_registry_port: %s" % (
+                    swarm_manager_address, docker_registry_port)) 
+        return swarm_manager_address
+    except Exception as ex:
+        slog.error("Exception: %s   %s   %s" % (type(ex), str(ex), ex.args))
+        slog.error("%s" % str(traceback.format_exc()))
+        return None 
 
 
 def transform_ip_addr(cidr): 
@@ -64,9 +71,10 @@ def transform_ip_addr(cidr):
         slog.debug("ip_addr : %s" % ip_addr[0])
         return ip_addr[0]
     except Exception as ex:
-        slog.error("Exception: type(%s)   %s" % (type(ex), ex.args))
+        slog.error("Exception: %s   %s   %s" % (type(ex), str(ex), ex.args))
+        slog.error("%s" % str(traceback.format_exc()))
         return None 
-   
+
 
 def monitor_thr(models_active):
     slog.debug("models_active: %s" % models_active)
@@ -119,9 +127,11 @@ def monitor_thr(models_active):
                         new_port.save() 
                         slog.debug("new port information is saved: %s" % new_port.ip)
                 except Exception as ex:
-                    slog.error("Exception: %s   %s" % (type(ex), ex.args)) 
+                    slog.error("Exception: %s   %s   %s" % (type(ex), str(ex), ex.args))
+                    slog.error("%s" % str(traceback.format_exc()))
         except Exception as ex:
-            slog.error("Exception: %s   %s  %s" % (type(ex), str(ex), ex.args))
+            slog.error("Exception: %s   %s   %s" % (type(ex), str(ex), ex.args))
+            slog.error("%s" % str(traceback.format_exc()))
             # reconnect to docker api server on swarm manager node
             my_client = docker.DockerClient(base_url=docker_api_base_url)
 

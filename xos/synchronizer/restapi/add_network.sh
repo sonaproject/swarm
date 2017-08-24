@@ -15,7 +15,7 @@ DATA=$(cat <<EOF
     "permit_all_slices": true,
     "autoconnect": false,
     "template": "http://10.10.2.240/api/core/networktemplates/6/",
-    "owner": "http://10.10.2.240/api/core/slices/1/"
+    "owner": "http://10.10.2.240/api/core/slices/3/"
 }
 EOF
 ) 
