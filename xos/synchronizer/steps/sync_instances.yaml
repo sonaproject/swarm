@@ -4,21 +4,41 @@
   become: true 
   tasks: 
     {% if delete -%}
+
     - name: delete swarm service '{{ swarm_service_name }}'
       shell: docker service rm  {{ swarm_service_name }}
+
     {% elif duplicated -%}
+
+    - name: Create host volume directory to share to docker container
+      file:
+        path={{ host_volume_path }}
+        state=directory 
     - name: get status of '{{ swarm_service_name }}' service
       shell: docker service ps {{ swarm_service_name }} 
+
     {% elif update -%}
+
+    - name: Create host volume directory to share to docker container
+      file:
+        path={{ host_volume_path }}
+        state=directory 
     - name: update swarm service '{{ swarm_service_name }}'
-      shell: docker service update  --force  {{ publish }}  {{ volume }} {{ swarm_service_name }}
+      shell: docker service update  --force  {{ volume }} {{ swarm_service_name }}
+
     {% else -%}
+    - name: Create host volume directory to share to docker container
+      file:
+        path={{ host_volume_path }}
+        state=directory 
     - name: start swarm service '{{ swarm_service_name }}'
-      shell: docker service create  {{ network_name }}  --name {{ swarm_service_name }}  {{ replica }}  {{ restart_condition }}  {{ publish }} {{ volume }}  {{ swarm_manager_address }}:{{ docker_registry_port }}/{{ image_name }}:{{ image_tag }} 
+      shell: docker service create  {{ network_name }}  --name {{ swarm_service_name }}  {{ replica }}  {{ restart_condition }}  {{ volume }}  {{ swarm_manager_address }}:{{ docker_registry_port }}/{{ image_name }}:{{ image_tag }} 
+
     {% endif %} 
+
+
     {% if not delete -%}
     - name: inspect '{{ swarm_service_name }}' service of swarm mode
       shell: docker service inspect {{ swarm_service_name }}
     {% endif %}
-
 

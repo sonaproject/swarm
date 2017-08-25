@@ -17,15 +17,6 @@
     - name: network inspection '{{ network_name }}'
       shell: docker network inspect  {{ network_name }} 
     {% else -%} 
-    ## TODO  add kuryr parameter like following example:
-    ## docker network create      --driver=kuryr/libnetwork2:latest
-    ##                       --ipam-driver=kuryr/libnetwork2:latest
-    ##                       --subnet 192.168.0.0/24 
-    ##                       --gateway 192.168.0.1
-    ##                       --ipam-opt=neutron.pool.name=kuryr-subnetpool 
-    ##                               -o neutron.pool.name=kuryr-subnetpool 
-    ##                               -o neutron.net.name=kuryr-net 
-    ##                       kuryr-net
     - name: create a docker network '{{ network_name }}'
       shell: docker network create  {{ opt_driver }}  {{ opt_ipam_driver }}  {{ opt_subnet }}  {{ opt_gateway }}  {{ opt_ipam_neutron_opt }}  {{ network_name }}
     - name: network inspection '{{ network_name }}'

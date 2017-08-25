@@ -32,15 +32,15 @@ def search_instance(container_name):
 
 
 
-def search_port(ip_address):
+def search_port(network, instance):
     try:
-        slog.debug("container ip_address: %s" % ip_address)
-        port = Port.objects.filter(ip=ip_address)
-        slog.debug("port object count: %s" % len(port))
+        slog.debug("network: %s   instance: %s" % (network.name, instance.name))
+        port = Port.objects.filter(network_id=network.id, instance_id=instance.id)
+        slog.debug("(%s, %s)  port object count: %s" % (network.name, instance.name, len(port)))
         if len(port) == 0:
-            slog.debug("%s does not exist, I would create new port tuple" % ip_address)
+            slog.debug("(%s, %s) does not exist, I would create new port tuple" % (network.name, instance.name))
             return None
-        slog.debug("%s(%s) already exists, I have nothing to do" % (port[0].ip, port[0].mac))
+        slog.debug("(%s, %s) Port already exists (%s)" % (network.name, instance.name, port[0].ip))
         return port[0]
     except Exception as ex:
         slog.error("Exception: %s   %s   %s" % (type(ex), str(ex), ex.args))
@@ -100,21 +100,32 @@ def monitor_thr(models_active):
                         slog.debug("Container name: %s" % container["Name"])
                         slog.debug("IPv4          : %s" % container["IPv4Address"])
                         slog.debug("MAC           : %s" % container["MacAddress"])
-                        slog.debug("EndpointID    : %s" % container["EndpointID"])
 
                         ip_addr = transform_ip_addr(container["IPv4Address"])
-                        # Check if same port tuple is on core_port.
-                        port_info = search_port(ip_addr)
-                        if port_info is not None: # port already exists, nothing to do.
-                            continue 
+
 
                         # To search instance name with container["Name"]
                         instance = search_instance(container["Name"])
                         if instance is None:
                             slog.debug("%s is not container which is created by XOS" % container["Name"])
-                            continue
+                            continue 
 
-                        slog.debug("instance name: %s   instance_id: %s   network_id: %s" % (instance.instance_name, instance.id, network.id))
+                        # Check if same port tuple is on core_port.
+                        port_info = search_port(network, instance)
+                        if port_info is not None:  # port already exists
+                            if port_info.ip == ip_addr: 
+                                # Nothing to do
+                                continue 
+                            else :
+                                # To renew old port tuple with new information 
+                                port_info.ip =  ip_addr
+                                port_info.mac = container["MacAddress"]
+                                port_info.save()
+                                slog.debug("(%s, %s) renew port information (%s)" % 
+                                            (instance.instance_name, network.name, port_info.ip))
+
+                        slog.debug("instance name: %s   instance_id: %s   network_id: %s" % 
+                                    (instance.instance_name, instance.id, network.id))
                         # To insert port tuple on core_port model 
                         new_port = Port()
                         new_port.ip      = ip_addr
@@ -125,7 +136,8 @@ def monitor_thr(models_active):
                         new_port.instance_id = instance.id
                         new_port.network_id  = network.id
                         new_port.save() 
-                        slog.debug("new port information is saved: %s" % new_port.ip)
+                        slog.debug("(%s, %s) renew port information (%s)" % 
+                                    (instance.instance_name, network.name, new_port.ip))
                 except Exception as ex:
                     slog.error("Exception: %s   %s   %s" % (type(ex), str(ex), ex.args))
                     slog.error("%s" % str(traceback.format_exc()))
@@ -135,4 +147,4 @@ def monitor_thr(models_active):
             # reconnect to docker api server on swarm manager node
             my_client = docker.DockerClient(base_url=docker_api_base_url)
 
-        time.sleep(5)
+        time.sleep(7)

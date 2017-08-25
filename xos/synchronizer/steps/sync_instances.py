@@ -2,7 +2,8 @@ import os
 import base64
 import socket
 import threading
-import time
+import time 
+import sys, traceback
 
 from synchronizers.swarm.swarmsyncstep import SwarmSyncStep
 from synchronizers.new_base.ansible_helper import *
@@ -56,8 +57,8 @@ class SyncInstances(SwarmSyncStep):
             (stdoutdata, stderrdata) = popen.communicate() 
             slog.debug("popen result: %s    etc data: %s" % (stdoutdata, stderrdata))
         except Exception as ex:
-            slog.info("Exception: %s" % ex)
-
+            slog.info("Exception: %s   %s   %s" % (type(ex), str(ex), ex.args))
+            slog.info("%s" % str(traceback.format_exc())) 
         return 0
 
 
@@ -84,9 +85,11 @@ class SyncInstances(SwarmSyncStep):
                         slog.debug("[THREAD] instance_name    : %s  (%s)" % (new_inst.instance_name, len(new_inst.instance_name)))
                         slog.debug("[THREAD] volumes          : %s  (%s)" % (new_inst.volumes ,      len(new_inst.volumes )))
 
+                        """  # 2018-08-25
                         if idx == 1:
                             slog.debug("Call update_instance_with_ssh()")
                             self.update_instance_with_ssh(inst_id)
+                        """
 
                         new_inst.numberCores = idx
                         new_inst.updated     = time.time()
@@ -109,8 +112,8 @@ class SyncInstances(SwarmSyncStep):
                             slog.debug("[THREAD] updated date was changed. Swarm synchronizer will run ansible")
                             return 
         except Exception as ex:
-            slog.info("[THREAD] Exception: %s" % str(ex.args)) 
-            slog.info("[THREAD] Exception: %s" % str(ex)) 
+            slog.error("Exception: %s   %s   %s" % (type(ex), str(ex), ex.args))
+            slog.error("%s" % str(traceback.format_exc())) 
 
 
     def chk_svc_exist(self, instance, swarm_manager_address):
@@ -129,7 +132,8 @@ class SyncInstances(SwarmSyncStep):
             slog.debug("swarm_svc.name   : %s" % swarm_svc.name)
             slog.debug("swarm_svc.attrs  : %s" % swarm_svc.attrs)
         except Exception as ex:
-            slog.debug("Exception: [%s] [%s]" % (str(ex.args), str(ex)))
+            slog.error("Exception: %s   %s   %s" % (type(ex), str(ex), ex.args))
+            slog.error("%s" % str(traceback.format_exc())) 
             slog.info("There is no duplicated service name, I would create new service (%s)" % instance_name)
             duplicated_flag = False 
         else:
@@ -146,208 +150,197 @@ class SyncInstances(SwarmSyncStep):
         slog.info("vm objs: %s" % objs) 
         return objs 
 
+
     def map_sync_inputs(self, instance): 
-        slog.debug("instance: %s    slice: %s" % (instance, instance.slice.name))
-        
-        controller = instance.node.site_deployment.controller 
-        swarm_manager_url = controller.auth_url
-        slog.info("swarm_manager_url: %s" % swarm_manager_url)
-        (swarm_manager_address, docker_registry_port) = swarm_manager_url.split(':')
-        slog.info("swarm_manager_address: %s    docker_registry_port: %s" % (
-                    swarm_manager_address, docker_registry_port)) 
+        try:
+            slog.debug("instance: %s    slice: %s" % (instance, instance.slice.name))
+            
+            controller = instance.node.site_deployment.controller 
+            swarm_manager_url = controller.auth_url
+            slog.info("swarm_manager_url: %s" % swarm_manager_url)
+            (swarm_manager_address, docker_registry_port) = swarm_manager_url.split(':')
+            slog.info("swarm_manager_address: %s    docker_registry_port: %s" % (
+                        swarm_manager_address, docker_registry_port)) 
 
-        # check if this service is created already on swarm cluster.
-        duplicated_flag = self.chk_svc_exist(instance, swarm_manager_address)
-        if duplicated_flag is True:
-            swarm_service_update_flag = True 
+            ## if instance.instance_uuid is not None, 
+            ## then This method will update the instance with new configuration.
+            swarm_service_update_flag = False
+            if instance.instance_uuid is not None:
+                if len(instance.instance_uuid) > 2:
+                    swarm_service_update_flag = True 
 
-        ## if instance.instance_uuid is not None, 
-        ## then This method will update the instance with new configuration.
-        swarm_service_update_flag = False
-        if instance.instance_uuid is not None:
-            if len(instance.instance_uuid) > 2:
+            # check if this service is created already on swarm cluster.
+            duplicated_flag = self.chk_svc_exist(instance, swarm_manager_address)
+            if duplicated_flag is True:
                 swarm_service_update_flag = True 
 
-		## To get volume information 
-        if instance.volumes:
-            slog.debug("instance.volumes: %s" % instance.volumes)
-            if len(instance.volumes) < 2:
-                slog.debug("instance.volumes(%s) is too short" % instance.volumes)
-                instance.volumes = "/usr/local/etc/haproxy"  ## Default value
-        else:
-            slog.debug("instance.volumes is None")
-            instance.volumes = "/usr/local/etc/haproxy"  ## Default value 
-        slog.debug("instance.volumes: %s" % instance.volumes) 
+            ## To get volume information 
+            slog.debug("slice.mount_data_sets: %s" % instance.slice.mount_data_sets)
+            mount_dest_path = "/usr/local/etc"
+            if len(instance.slice.mount_data_sets) < 2:
+                slog.debug("instance.slice.mount_data_sets(%s) is too short" % instance.slice.mount_data_sets)
+            else:
+                mount_dest_path = instance.slice.mount_data_sets
+            slog.debug("volume mount destination path: %s" % mount_dest_path)
 
-        ## set options for volume mounting 
-        ##   --mount type=bind,src=/opt/xos/instance_volume/1,dst=/usr/local/etc/haproxy  
-        volume_mount_opt = " "
-        if swarm_service_update_flag is True:
-            volume_mount_opt = "--mount-add type=bind,src=/opt/xos/instance_volume/%s,dst=%s" % (
-                                instance.id, instance.volumes) 
-        else:
-            volume_mount_opt = "--mount type=bind,src=/opt/xos/instance_volume/%s,dst=%s" % (
-                                instance.id, instance.volumes) 
-        slog.debug("volume_mount_opt: %s" % volume_mount_opt)
+            ## set options for volume mounting 
+            ## (example) --mount type=bind,src=/opt/xos/instance_volume/1,dst=/usr/local/etc/haproxy  
+            volume_mount_opt = " "
+            if swarm_service_update_flag is True:
+                volume_mount_opt = "--mount-add type=bind,src=/opt/xos/instance_volume/%s,dst=%s" % (
+                                    instance.id, mount_dest_path) 
+            else:
+                volume_mount_opt = "--mount type=bind,src=/opt/xos/instance_volume/%s,dst=%s" % (
+                                    instance.id, mount_dest_path) 
+            slog.debug("volume_mount_opt: %s" % volume_mount_opt)
+            host_volume_path = "/opt/xos/instance_volume/%s" % instance.id
+            slog.debug("host_volume_path: %s" % host_volume_path)
 
-        # sanity check - make sure model_policy for slice has run
-        if ((not instance.slice.policed) or (instance.slice.policed < instance.slice.updated)):
-            slog.info("Instance %s waiting on Slice %s to execute model policies" % (
-                        instance, instance.slice.name))
-            raise DeferredException(
-                "Instance %s waiting on Slice %s to execute model policies" % (
-                        instance, instance.slice.name))
-
-        # sanity check - make sure model_policy for all slice networks have run
-        networks = instance.slice.ownedNetworks.all()
-        slog.debug("[AA] network list: %s" % str(networks))
-
-        for network in instance.slice.ownedNetworks.all():
-            slog.info("instance: %s   network of slice: %s" % (instance.name, network.name, instance.slice.name))
-            if ((not network.policed) or (network.policed < network.updated)):
-                slog.info("Instance %s waiting on Network %s to execute model policies" % (
-                            instance, network.name))
+            # sanity check - make sure model_policy for slice has run
+            if ((not instance.slice.policed) or (instance.slice.policed < instance.slice.updated)):
+                slog.info("Instance %s waiting on Slice %s to execute model policies" % (
+                            instance, instance.slice.name))
                 raise DeferredException(
-                    "Instance %s waiting on Network %s to execute model policies" % (
-                            instance, network.name))
+                            "Instance %s waiting on Slice %s to execute model policies" % (
+                            instance, instance.slice.name))
 
-        slog.debug("Model Policy checking is done successfully.")
+            # sanity check - make sure model_policy for all slice networks have run
+            networks = instance.slice.ownedNetworks.all()
+            slog.debug("network list for slice of this instance(%s): %s" % (instance.name, str(networks)))
 
-        nics = []
-
-        # handle ports the were created by the user
-        """
-        for port in Port.objects.filter(instance_id=instance.id):
-            slog.debug("Port.port_id: %s" % port.port_id)
-            if not port.port_id:
-                raise DeferredException("Instance %s waiting on port %s" % (instance, port))
-            nics.append({"kind": "port", "value": port.port_id, "network": port.network})
-        """
-
-        # we want to exclude from 'nics' any network that already has a Port
-        # existing_port_networks = [port.network for port in Port.objects.filter(instance_id=instance.id)]
-        # existing_port_network_ids = [x.id for x in existing_port_networks]
-        # slog.debug("existing_port_network_id list: %s" % str(existing_port_network_ids))
-
-        """
-        networks = [ns.network for ns in NetworkSlice.objects.filter(slice_id=instance.slice.id) if
-                    ns.network.id not in existing_port_network_ids]
-        networks_ids = [x.id for x in networks]
-        slog.debug("networks id list: %s" % str(networks_ids))
-        controller_networks = ControllerNetwork.objects.filter(
-                                                controller_id=instance.node.site_deployment.controller.id)
-        controller_networks = [x for x in controller_networks if x.id in networks_ids]
-        slog.debug("controller_network list: %s" % str(controller_networks))
-        """
-
-        swarm_network = ""
-        for network in networks:
-            slog.debug("networkd.id: %s(%s, %s)  controller.id: %s" % (
-                        network.id, network.name, network.subnet, 
-                        instance.node.site_deployment.controller.id))
-            if not ControllerNetwork.objects.filter(
-                                            network_id=network.id,
-                                            controller_id=instance.node.site_deployment.controller.id).exists():
-                raise DeferredException(
-                                "Instance %s Private Network %s lacks ControllerNetwork object" % (
+            for network in instance.slice.ownedNetworks.all():
+                slog.info("instance: %s   network of slice(%s): %s" % (instance.name, instance.slice.name, network.name))
+                if ((not network.policed) or (network.policed < network.updated)):
+                    slog.info("Instance %s waiting on Network %s to execute model policies" % (
                                 instance, network.name))
-            swarm_network += " --network %s " % network.name
-        slog.debug("swarm_network: %s" % swarm_network)
+                    raise DeferredException(
+                                "Instance %s waiting on Network %s to execute model policies" % (
+                                instance, network.name)) 
+            slog.debug("Model Policy checking is done successfully.")
 
-        image_name = None
-        controller_images = instance.image.controllerimages.all()
-        controller_images = [x for x in controller_images if
-                             x.controller_id == instance.node.site_deployment.controller.id]
-        if controller_images:
-            image_name = controller_images[0].image.name
-            slog.info("using image from ControllerImage object: " + str(image_name))
+            swarm_network = ""
+            for network in networks:
+                slog.debug("networkd.id: %s(%s, %s)  controller.id: %s" % (
+                            network.id, network.name, network.subnet, 
+                            instance.node.site_deployment.controller.id))
+                if not ControllerNetwork.objects.filter(
+                                                network_id=network.id,
+                                                controller_id=instance.node.site_deployment.controller.id).exists():
+                    raise DeferredException(
+                                    "Instance %s Private Network %s lacks ControllerNetwork object" % (
+                                    instance, network.name))
+                swarm_network += " --network %s " % network.name
+            slog.debug("swarm_network: %s" % swarm_network)
 
-        host_filter = instance.node.name.strip()
-        slog.info("instance.node.name: %s" % instance.node.name)
+            image_name = None
+            controller_images = instance.image.controllerimages.all()
+            controller_images = [x for x in controller_images if
+                                 x.controller_id == instance.node.site_deployment.controller.id]
+            if controller_images:
+                image_name = controller_images[0].image.name
+                slog.info("using image from ControllerImage object: " + str(image_name))
 
-        instance_name = '%s-%d' % (instance.slice.name, instance.id)
-        slog.info("instance.slice.name: %s    instance.id: %s    instance_name: %s" % (
-                    instance.slice.name, instance.id, instance_name))
-        self.instance_name = instance_name
+            host_filter = instance.node.name.strip()
+            slog.info("instance.node.name: %s" % instance.node.name)
 
-        input_fields = {
-                        'swarm_manager_address' : swarm_manager_address,
-                        'swarm_service_name'    : instance_name,
-                        'network_name'          : swarm_network,
-                        'replicas'              : "--replicas 1",              ## default value
-                        'restart_condition'     : "--restart-condition on-failure",  ## default value
-                        'volume'                : volume_mount_opt,
-                        'docker_registry_port'  : docker_registry_port,
-                        'image_name'            : instance.image.name,
-                        'image_tag'             : instance.image.tag, 
-                        'ansible_tag'           : instance_name,
-                        'delete'                : False,
-                        # 'duplicated'            : duplicated_flag,
-                        'update'                : swarm_service_update_flag
-                        }
+            instance_name = '%s-%d' % (instance.slice.name, instance.id)
+            slog.info("instance.slice.name: %s    instance.id: %s    instance_name: %s" % (
+                        instance.slice.name, instance.id, instance_name))
+            self.instance_name = instance_name
 
-        slog.info("input_fields: %s" % input_fields)
+            input_fields = {
+                            'swarm_manager_address' : swarm_manager_address,
+                            'swarm_service_name'    : instance_name,
+                            'network_name'          : swarm_network,
+                            'replicas'              : "--replicas 1",              ## default value
+                            'restart_condition'     : "--restart-condition on-failure  --restart-delay 15s  --restart-window 30s",  ## default value
+                            'volume'                : volume_mount_opt,
+                            'host_volume_path'      : host_volume_path,
+                            'docker_registry_port'  : docker_registry_port,
+                            'image_name'            : instance.image.name,
+                            'image_tag'             : instance.image.tag, 
+                            'ansible_tag'           : instance_name,
+                            'delete'                : False,
+                            # 'duplicated'            : duplicated_flag,
+                            'update'                : swarm_service_update_flag
+                            }
 
-        if swarm_service_update_flag is False:
-            slog.info("swarm_service_update_flag is %s, so I will update once more" % swarm_service_update_flag) 
-            try:
-                my_thr = threading.Thread(target=self.update_instance, args=(instance,))
-                my_thr.start()
-            except Exception as ex:
-                slog.log_exc("update_instance Thread creation failed - %s" % ex)
+            slog.info("input_fields: %s" % input_fields)
 
-        return input_fields
+            if swarm_service_update_flag is False:
+                slog.info("swarm_service_update_flag is %s, so I will update once more" % 
+                            swarm_service_update_flag) 
+                try:
+                    my_thr = threading.Thread(target=self.update_instance, args=(instance,))
+                    my_thr.start()
+                except Exception as ex:
+                    slog.error("Exception: %s   %s   %s" % (type(ex), str(ex), ex.args))
+                    slog.error("%s" % str(traceback.format_exc())) 
+            return input_fields
+        except Exception as ex:
+            slog.error("Exception: %s   %s   %s" % (type(ex), str(ex), ex.args))
+            slog.error("%s" % str(traceback.format_exc()))
+
 
     def map_sync_outputs(self, instance, res):
-        slog.info("ansible playbook ressult: %s" % str(res))
-        slog.info("ansible playbook ressult[1][stdout]: %s" % str(res[1]['stdout']))
+        try:
+            slog.info("ansible playbook ressult: %s" % str(res))
+            slog.info("ansible playbook ressult[1][stdout]: %s" % str(res[1]['stdout']))
 
-        res_stdout = res[1]['stdout']
-        json_content = json.loads(res_stdout)
-        slog.info("json_content: %s" % str(json_content))
-        instance.instance_id = json_content[0]['Spec']["Name"]
-        slog.info("instance.instance_id: %s" % str(instance.instance_id))
-        instance.instance_uuid = json_content[0]['ID']
-        slog.info("instance.instance_uuid: %s" % str(instance.instance_uuid))
+            res_stdout = res[2]['stdout']
+            json_content = json.loads(res_stdout)
+            slog.info("json_content: %s" % str(json_content))
+            instance.instance_id = json_content[0]['Spec']["Name"]
+            slog.info("instance.instance_id: %s" % str(instance.instance_id))
+            instance.instance_uuid = json_content[0]['ID']
+            slog.info("instance.instance_uuid: %s" % str(instance.instance_uuid))
 
-        controller = instance.node.site_deployment.controller
-        swarm_manager_url = controller.auth_url
-        (swarm_manager_address, docker_registry_port) = swarm_manager_url.split(':')
-        slog.info("swarm_manager_address: %s    docker_registry_port: %s" % (
-                    swarm_manager_address, docker_registry_port))
+            controller = instance.node.site_deployment.controller
+            swarm_manager_url = controller.auth_url
+            (swarm_manager_address, docker_registry_port) = swarm_manager_url.split(':')
+            slog.info("swarm_manager_address: %s    docker_registry_port: %s" % (
+                        swarm_manager_address, docker_registry_port))
 
-        try: 
-            instance.ip = socket.gethostbyname(swarm_manager_address)
-        except Exception,e:
-            slog.info(str(e)) 
-            slog.info("hostname(%s) resolution fail" % swarm_manager_address)
-            pass 
+            try: 
+                instance.ip = socket.gethostbyname(swarm_manager_address)
+            except Exception,e:
+                slog.info(str(e)) 
+                slog.info("hostname(%s) resolution fail" % swarm_manager_address)
+                pass 
 
-        instance.instance_name = self.instance_name
-        instance.save()
+            instance.instance_name = self.instance_name
+            instance.save()
+        except Exception as ex:
+            slog.error("Exception: %s   %s   %s" % (type(ex), str(ex), ex.args))
+            slog.error("%s" % str(traceback.format_exc()))
+
 
     def map_delete_inputs(self, instance):
-        controller_register = json.loads(instance.node.site_deployment.controller.backend_register)
-        slog.info("controller_register: %s" % controller_register)
+        try:
+            controller_register = json.loads(instance.node.site_deployment.controller.backend_register)
+            slog.info("controller_register: %s" % controller_register)
 
-        if (controller_register.get('disabled', False)):
-            slog.info('Controller %s is disabled' % instance.node.site_deployment.controller.name)
-            raise InnocuousException('Controller %s is disabled' % instance.node.site_deployment.controller.name)
+            if (controller_register.get('disabled', False)):
+                slog.info('Controller %s is disabled' % instance.node.site_deployment.controller.name)
+                raise InnocuousException('Controller %s is disabled' % instance.node.site_deployment.controller.name)
 
-        instance_name = '%s-%d' % (instance.slice.name, instance.id)
-        slog.info("instance_name: %s" % instance_name)
+            instance_name = '%s-%d' % (instance.slice.name, instance.id)
+            slog.info("instance_name: %s" % instance_name)
 
-        controller = instance.node.site_deployment.controller
-        slog.info("controller: %s" % controller) 
-        swarm_manager_url = controller.auth_url
-        slog.info("swarm_manager_url: %s" % swarm_manager_url)
-        (swarm_manager_address, docker_registry_port) = swarm_manager_url.split(':')
-        slog.info("swarm_manager_address: %s    docker_registry_port: %s" % (swarm_manager_address, docker_registry_port))
+            controller = instance.node.site_deployment.controller
+            slog.info("controller: %s" % controller) 
+            swarm_manager_url = controller.auth_url
+            slog.info("swarm_manager_url: %s" % swarm_manager_url)
+            (swarm_manager_address, docker_registry_port) = swarm_manager_url.split(':')
+            slog.info("swarm_manager_address: %s    docker_registry_port: %s" % (swarm_manager_address, docker_registry_port))
 
-        input = {
-                'swarm_manager_address' : swarm_manager_address,
-                'swarm_service_name'    : instance_name,
-                'ansible_tag'           : instance_name,
-                'delete'                : True
-                }
-        return input
+            input = {
+                    'swarm_manager_address' : swarm_manager_address,
+                    'swarm_service_name'    : instance_name,
+                    'ansible_tag'           : instance_name,
+                    'delete'                : True
+                    }
+            return input
+        except Exception as ex:
+            slog.error("Exception: %s   %s   %s" % (type(ex), str(ex), ex.args))
+            slog.error("%s" % str(traceback.format_exc()))
