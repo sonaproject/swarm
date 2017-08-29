@@ -97,8 +97,7 @@ class SyncControllerNetworks(SwarmSyncStep):
         slog.info("Start IP Address: %s    End IP Address: %s" % (start_ip, end_ip)) 
 
         self.cidr=cidr
-        slice = controller_network.network.owner
-
+        slice = controller_network.network.owner 
 
         opt_driver = "--driver=overlay" # default driver for swarm
         opt_ipam_driver = " "

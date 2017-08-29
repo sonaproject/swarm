@@ -119,7 +119,7 @@ class SyncInstances(SwarmSyncStep):
     def chk_svc_exist(self, instance, swarm_manager_address):
         duplicated_flag = False
         try:
-            instance_name = '%s-%d' % (instance.slice.name, instance.id)
+            instance_name = '%s-%s-%d' % (instance.slice.service.name, instance.slice.name, instance.id)
             slog.debug("Service name to chkeck: %s" % instance_name)
 
             import docker
@@ -243,9 +243,10 @@ class SyncInstances(SwarmSyncStep):
             host_filter = instance.node.name.strip()
             slog.info("instance.node.name: %s" % instance.node.name)
 
-            instance_name = '%s-%d' % (instance.slice.name, instance.id)
-            slog.info("instance.slice.name: %s    instance.id: %s    instance_name: %s" % (
-                        instance.slice.name, instance.id, instance_name))
+            #instance_name = '%s-%d' % (instance.slice.name, instance.id)
+            instance_name = '%s-%s-%d' % (instance.slice.service.name, instance.slice.name, instance.id)
+            slog.info("service name: %s   instance.slice.name: %s    instance.id: %s    instance_name: %s" % (
+                        instance.slice.service.name, instance.slice.name, instance.id, instance_name))
             self.instance_name = instance_name
 
             input_fields = {

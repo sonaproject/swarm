@@ -2,6 +2,8 @@
 
 source ./config.sh
 
+# "shared_network_name": "kuryr/libnetwork2:latest",
+
 DATA=$(cat <<EOF 
 { 
     "name": "kuryr_template",
@@ -9,7 +11,7 @@ DATA=$(cat <<EOF
     "visibility": "private",
     "translation": "none",
     "access": null,
-    "shared_network_name": "kuryr/libnetwork2:latest",
+    "shared_network_name": "overlay",
     "shared_network_id": "",
     "topology_kind": "bigswitch",
     "controller_kind": null,

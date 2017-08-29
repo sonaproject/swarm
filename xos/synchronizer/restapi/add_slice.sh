@@ -10,13 +10,13 @@ DATA=$(cat <<EOF
     "slice_url": "",
     "max_instances": 9,
     "exposed_ports": "",
-    "mount_data_sets": "/usr/local/etc/andrew_haproxy/",
+    "mount_data_sets": "/usr/local/etc/haproxy/",
     "default_isolation": "vm",
     "site": "http://10.10.2.240/api/core/sites/1/",
-    "service": null,
+    "service": "http://10.10.2.240/api/core/services/2/",
     "creator": "http://10.10.2.240/api/core/users/1/",
-    "default_flavor": null,
-    "default_image": null,
+    "default_flavor": "http://10.10.2.240/api/core/flavors/3/",
+    "default_image": "http://10.10.2.240/api/core/images/1/",
     "default_node": null 
 }
 EOF

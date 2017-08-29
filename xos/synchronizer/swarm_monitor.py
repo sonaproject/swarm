@@ -76,6 +76,41 @@ def transform_ip_addr(cidr):
         return None 
 
 
+def get_worker_conn_list(my_client):
+    swarm_node_conn_list = []
+    try: 
+        swarm_nodes = my_client.nodes.list()
+        for node in swarm_nodes:
+            # To extract ip address, hostname of swarm node
+            try:
+                hostname = node.attrs["Description"]["Hostname"]
+                ip_addr  = node.attrs["Status"]["Addr"]
+                slog.info("Swarm node: %s (%s)" % (hostname, ip_addr))
+                docker_api_base_url = "tcp://%s:4243" % ip_addr
+                slog.debug("docker_api_base_url: %s" % docker_api_base_url) 
+                swarm_client = docker.DockerClient(base_url=docker_api_base_url)
+                swarm_node_conn_list.append(swarm_client)
+                # TODO: add this node object to core_node
+                ##
+                ##
+                ##
+                ##
+                ##
+                ##
+                ## 
+            except Exception as ex:
+                slog.error("Exception: %s   %s   %s" % (type(ex), str(ex), ex.args))
+                slog.error("%s" % str(traceback.format_exc()))
+                slog.error("This swarm server(%s) is unavailable" % docker_api_base_url) 
+
+        slog.debug("swarm node(%s): %s" % (len(swarm_node_conn_list), swarm_node_conn_list))
+        return swarm_node_conn_list 
+    except Exception as ex:
+        slog.error("Exception: %s   %s   %s" % (type(ex), str(ex), ex.args))
+        slog.error("%s" % str(traceback.format_exc()))
+        return None 
+
+
 def monitor_thr(models_active):
     slog.debug("models_active: %s" % models_active)
 
@@ -84,60 +119,67 @@ def monitor_thr(models_active):
     slog.debug("docker_api_base_url: %s" % docker_api_base_url)
     my_client = docker.DockerClient(base_url=docker_api_base_url)
 
+    worker_node_connected = False 
+    swarm_node_conn_list = []
     while True:
         try: 
+            # To extract swarm node connection list from swarm manager
+            if worker_node_connected == False:
+                swarm_node_conn_list = get_worker_conn_list(my_client) 
+                worker_node_connected = True
+
             # To extract network list from core_network model  
             network_list = Network.objects.all()
             for network in network_list:
                 try: 
                     # To get docker network information from swarm manager
                     slog.debug("network.name: %s" % network.name)
-                    docker_net = my_client.networks.get(network.name)
-                    container_list = docker_net.attrs['Containers'].values()
+                    for swarm_client in swarm_node_conn_list:
+                        try:
+                            docker_net = swarm_client.networks.get(network.name)
+                            container_list = docker_net.attrs['Containers'].values()
 
-                    # To extract ip address and container name which uses its network
-                    for container in container_list:
-                        slog.debug("Container name: %s" % container["Name"])
-                        slog.debug("IPv4          : %s" % container["IPv4Address"])
-                        slog.debug("MAC           : %s" % container["MacAddress"])
+                            # To extract ip address and container name which uses its network
+                            for container in container_list:
+                                slog.debug("Container name: %s" % container["Name"])
+                                slog.debug("IPv4          : %s" % container["IPv4Address"]) 
+                                ip_addr = transform_ip_addr(container["IPv4Address"]) 
 
-                        ip_addr = transform_ip_addr(container["IPv4Address"])
+                                # To search instance name with container["Name"]
+                                instance = search_instance(container["Name"])
+                                if instance is None:
+                                    slog.debug("%s is not container which is created by XOS" % container["Name"])
+                                    continue 
 
+                                # Check if same port tuple is on core_port.
+                                port_info = search_port(network, instance)
+                                if port_info is not None:  # port already exists
+                                    if port_info.ip == ip_addr: 
+                                        continue  # Nothing to do:
+                                    else :
+                                        # renew port information
+                                        port_info.ip =  ip_addr
+                                        port_info.mac = container["MacAddress"]
+                                        port_info.save()
+                                        slog.debug("(%s, %s) renew port information (%s)" % 
+                                                    (instance.instance_name, network.name, port_info.ip))
 
-                        # To search instance name with container["Name"]
-                        instance = search_instance(container["Name"])
-                        if instance is None:
-                            slog.debug("%s is not container which is created by XOS" % container["Name"])
-                            continue 
-
-                        # Check if same port tuple is on core_port.
-                        port_info = search_port(network, instance)
-                        if port_info is not None:  # port already exists
-                            if port_info.ip == ip_addr: 
-                                # Nothing to do
-                                continue 
-                            else :
-                                # To renew old port tuple with new information 
-                                port_info.ip =  ip_addr
-                                port_info.mac = container["MacAddress"]
-                                port_info.save()
+                                slog.debug("instance name: %s   instance_id: %s   network_id: %s" % 
+                                            (instance.instance_name, instance.id, network.id))
+                                # To insert port tuple on core_port model 
+                                new_port = Port()
+                                new_port.ip      = ip_addr
+                                new_port.mac     = container["MacAddress"]
+                                new_port.leaf_model_name = "Port"
+                                new_port.xos_created = True
+                                new_port.instance_id = instance.id
+                                new_port.network_id  = network.id
+                                new_port.save() 
                                 slog.debug("(%s, %s) renew port information (%s)" % 
-                                            (instance.instance_name, network.name, port_info.ip))
-
-                        slog.debug("instance name: %s   instance_id: %s   network_id: %s" % 
-                                    (instance.instance_name, instance.id, network.id))
-                        # To insert port tuple on core_port model 
-                        new_port = Port()
-                        new_port.ip      = ip_addr
-                        new_port.mac     = container["MacAddress"]
-                        new_port.port_id = container["EndpointID"]
-                        new_port.leaf_model_name = "Port"
-                        new_port.xos_created = True
-                        new_port.instance_id = instance.id
-                        new_port.network_id  = network.id
-                        new_port.save() 
-                        slog.debug("(%s, %s) renew port information (%s)" % 
-                                    (instance.instance_name, network.name, new_port.ip))
+                                            (instance.instance_name, network.name, new_port.ip)) 
+                        except Exception as ex:
+                            slog.error("Exception: %s   %s   %s" % (type(ex), str(ex), ex.args))
+                            slog.error("%s" % str(traceback.format_exc())) 
                 except Exception as ex:
                     slog.error("Exception: %s   %s   %s" % (type(ex), str(ex), ex.args))
                     slog.error("%s" % str(traceback.format_exc()))
@@ -146,5 +188,5 @@ def monitor_thr(models_active):
             slog.error("%s" % str(traceback.format_exc()))
             # reconnect to docker api server on swarm manager node
             my_client = docker.DockerClient(base_url=docker_api_base_url)
-
+            worker_node_connected = False 
         time.sleep(7)
