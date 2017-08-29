@@ -242,7 +242,6 @@ class SyncInstances(SwarmSyncStep):
             host_filter = instance.node.name.strip()
             slog.info("instance.node.name: %s" % instance.node.name)
 
-            #instance_name = '%s-%d' % (instance.slice.name, instance.id)
             instance_name = '%s-%s-%d' % (instance.slice.service.name, instance.slice.name, instance.id)
             slog.info("service name: %s   instance.slice.name: %s    instance.id: %s    instance_name: %s" % (
                         instance.slice.service.name, instance.slice.name, instance.id, instance_name))
@@ -261,7 +260,6 @@ class SyncInstances(SwarmSyncStep):
                             'image_tag'             : instance.image.tag, 
                             'ansible_tag'           : instance_name,
                             'delete'                : False,
-                            # 'duplicated'            : duplicated_flag,
                             'update'                : swarm_service_update_flag
                             }
 
@@ -324,7 +322,7 @@ class SyncInstances(SwarmSyncStep):
                 slog.info('Controller %s is disabled' % instance.node.site_deployment.controller.name)
                 raise InnocuousException('Controller %s is disabled' % instance.node.site_deployment.controller.name)
 
-            instance_name = '%s-%d' % (instance.slice.name, instance.id)
+            instance_name = '%s-%s-%d' % (instance.slice.service.name, instance.slice.name, instance.id)
             slog.info("instance_name: %s" % instance_name)
 
             controller = instance.node.site_deployment.controller

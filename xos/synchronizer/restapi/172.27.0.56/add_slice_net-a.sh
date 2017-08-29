@@ -5,7 +5,7 @@ source config.sh
 DATA=$(cat <<EOF
 {
     "name": "mysite_net-a",
-    "description": "net-a",
+    "description": "This is a slice for net-a",
     "network": "noauto",
     "site": "http://10.1.1.237/api/core/sites/1/",
     "service": "http://10.1.1.237/api/core/services/1/",
