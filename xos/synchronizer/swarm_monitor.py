@@ -90,19 +90,10 @@ def get_worker_conn_list(my_client):
                 slog.debug("docker_api_base_url: %s" % docker_api_base_url) 
                 swarm_client = docker.DockerClient(base_url=docker_api_base_url)
                 swarm_node_conn_list.append(swarm_client)
-                # TODO: add this node object to core_node
-                ##
-                ##
-                ##
-                ##
-                ##
-                ##
-                ## 
             except Exception as ex:
                 slog.error("Exception: %s   %s   %s" % (type(ex), str(ex), ex.args))
                 slog.error("%s" % str(traceback.format_exc()))
                 slog.error("This swarm server(%s) is unavailable" % docker_api_base_url) 
-
         slog.debug("swarm node(%s): %s" % (len(swarm_node_conn_list), swarm_node_conn_list))
         return swarm_node_conn_list 
     except Exception as ex:

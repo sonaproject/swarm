@@ -85,9 +85,8 @@ class SyncInstances(SwarmSyncStep):
                         slog.debug("[THREAD] instance_name    : %s  (%s)" % (new_inst.instance_name, len(new_inst.instance_name)))
                         slog.debug("[THREAD] volumes          : %s  (%s)" % (new_inst.volumes ,      len(new_inst.volumes )))
 
-                        """  # 2018-08-25
+                        """ 
                         if idx == 1:
-                            slog.debug("Call update_instance_with_ssh()")
                             self.update_instance_with_ssh(inst_id)
                         """
 
@@ -253,8 +252,8 @@ class SyncInstances(SwarmSyncStep):
                             'swarm_manager_address' : swarm_manager_address,
                             'swarm_service_name'    : instance_name,
                             'network_name'          : swarm_network,
-                            'replicas'              : "--replicas 1",              ## default value
-                            'restart_condition'     : "--restart-condition on-failure  --restart-delay 15s  --restart-window 30s",  ## default value
+                            'replicas'              : "--replicas 1",
+                            'restart_condition'     : "--restart-condition on-failure  --restart-delay 9s ",
                             'volume'                : volume_mount_opt,
                             'host_volume_path'      : host_volume_path,
                             'docker_registry_port'  : docker_registry_port,
