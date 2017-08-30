@@ -164,6 +164,7 @@ def get_svc_info(docker_client):
             slog.error("Exception: %s   %s   %s" % (type(ex), str(ex), ex.args))
             slog.error("%s" % str(traceback.format_exc()))
             instance.backend_status = "2 - NOK : %s service is not running (%s)" % (instance.instance_name, str(ex))
+            instance.save(update_fields=['backend_status'])
 
 
 def monitor_thr(models_active):
