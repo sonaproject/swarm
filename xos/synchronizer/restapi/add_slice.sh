@@ -17,7 +17,6 @@ DATA=$(cat <<EOF
     "creator": "http://10.10.2.240/api/core/users/1/",
     "default_flavor": "http://10.10.2.240/api/core/flavors/3/",
     "default_image": "http://10.10.2.240/api/core/images/1/",
-    "default_node": null 
 }
 EOF
 )
@@ -26,3 +25,4 @@ curl -H "Accept: application/json; indent=4" -H "Content-Type: application/json"
 
 
 #    "network": null,
+#    "default_node": null 

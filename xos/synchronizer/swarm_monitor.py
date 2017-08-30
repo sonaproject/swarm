@@ -34,13 +34,13 @@ def search_instance(container_name):
 
 def search_port(network, instance):
     try:
-        slog.debug("network: %s   instance: %s" % (network.name, instance.name))
+        slog.debug("network: %s   instance: %s" % (network.name, instance.instance_name))
         port = Port.objects.filter(network_id=network.id, instance_id=instance.id)
-        slog.debug("(%s, %s)  port object count: %s" % (network.name, instance.name, len(port)))
+        slog.debug("(%s, %s)  port object count: %s" % (network.name, instance.instance_name, len(port)))
         if len(port) == 0:
-            slog.debug("(%s, %s) does not exist, I would create new port tuple" % (network.name, instance.name))
+            slog.debug("(%s, %s) does not exist, I would create new port tuple" % (network.name, instance.instance_name))
             return None
-        slog.debug("(%s, %s) Port already exists (%s)" % (network.name, instance.name, port[0].ip))
+        slog.debug("(%s, %s) Port already exists (%s)" % (network.name, instance.instance_name, port[0].ip))
         return port[0]
     except Exception as ex:
         slog.error("Exception: %s   %s   %s" % (type(ex), str(ex), ex.args))
@@ -76,10 +76,10 @@ def transform_ip_addr(cidr):
         return None 
 
 
-def get_worker_conn_list(my_client):
+def get_worker_conn_list(docker_client):
     swarm_node_conn_list = []
     try: 
-        swarm_nodes = my_client.nodes.list()
+        swarm_nodes = docker_client.nodes.list()
         for node in swarm_nodes:
             # To extract ip address, hostname of swarm node
             try:
@@ -102,21 +102,89 @@ def get_worker_conn_list(my_client):
         return None 
 
 
+def get_svc_info(docker_client):
+    task_filter = {'desired-state': 'running'} 
+    instance_list = Instance.objects.all()
+    for instance in instance_list:
+        try:
+            slog.debug("instance: %s" % instance.instance_name)
+            docker_svc = docker_client.services.get(instance.instance_name)
+            docker_task_list = docker_svc.tasks(task_filter)
+            if len(docker_task_list) == 0:
+                slog.debug("service(%s) doesn't have a running container" % instance.instance_name)                
+                instance.backend_status = "2 - NOK : Docker container is not running"
+                instance.save(update_fields=['backend_status'])
+                continue
+            if instance.backend_status != "1 - OK":
+                instance.backend_status = "1 - OK"
+                instance.save(update_fields=['backend_status'])
+            docker_task = docker_task_list[0]
+            #slog.debug("(instance: %s) docker task information: %s" % (instance.instance_name, docker_task))
+            slog.debug("(instance: %s) Container Status : %s" % 
+                            (instance.instance_name, docker_task["Status"]["State"])) 
+            attached_network_list = docker_task["NetworksAttachments"]
+            if len(attached_network_list) == 0:
+                slog.debug("Instance(%s) doesn't have a network" % instance.instance_name)
+                continue
+            for attached_network in attached_network_list:
+                network_name = attached_network["Network"]["Spec"]["Name"]
+                ip_addr      = transform_ip_addr(attached_network["Addresses"][0])
+                slog.debug("(instance: %s) Network Name: %s" % (instance.instance_name, network_name))
+                slog.debug("(instance: %s) IP Address  : %s" % (instance.instance_name, ip_addr)) 
+                # To search network_id from DB,  
+                network = Network.objects.get(name=network_name) 
+                if network is None:
+                    slog.info("%s does not exist on DB(core_networ tabke)" % network_name) 
+                    continue 
+
+                # To check if same port tuple is on core_port.
+                port_info = search_port(network, instance)
+                if port_info is None: 
+                    # To insert port tuple on core_port model
+                    new_port = Port() 
+                    new_port.ip          = ip_addr
+                    new_port.leaf_model_name = "Port"
+                    new_port.xos_created = True
+                    new_port.instance_id = instance.id
+                    new_port.network_id  = network.id
+                    new_port.save() 
+                    slog.debug("(%s, %s) insert port information (%s) into core_port table on DB" % 
+                                (instance.instance_name, network.name, ip_addr)) 
+                else: # port already exists 
+                    if port_info.ip == ip_addr:
+                        slog.debug("port(%s) is in DB already" % ip_addr)
+                        continue  # Nothing to do:
+                    else :
+                        # update port information
+                        port_info.ip =  ip_addr
+                        port_info.save()
+                        slog.debug("(%s, %s) update port information (%s)" %
+                                    (instance.instance_name, network.name, port_info.ip)) 
+        except Exception as ex:
+            slog.error("Exception: %s   %s   %s" % (type(ex), str(ex), ex.args))
+            slog.error("%s" % str(traceback.format_exc()))
+
+
 def monitor_thr(models_active):
     slog.debug("models_active: %s" % models_active)
 
     swarm_manager_address = get_swarm_manager_address() 
     docker_api_base_url = "tcp://%s:4243" % swarm_manager_address 
     slog.debug("docker_api_base_url: %s" % docker_api_base_url)
-    my_client = docker.DockerClient(base_url=docker_api_base_url)
+    docker_client = docker.DockerClient(base_url=docker_api_base_url)
 
+    '''
     worker_node_connected = False 
+    '''
     swarm_node_conn_list = []
     while True:
         try: 
+            get_svc_info(docker_client)
+
+            '''
             # To extract swarm node connection list from swarm manager
             if worker_node_connected == False:
-                swarm_node_conn_list = get_worker_conn_list(my_client) 
+                swarm_node_conn_list = get_worker_conn_list(docker_client) 
                 worker_node_connected = True
 
             # To extract network list from core_network model  
@@ -173,11 +241,14 @@ def monitor_thr(models_active):
                             slog.error("%s" % str(traceback.format_exc())) 
                 except Exception as ex:
                     slog.error("Exception: %s   %s   %s" % (type(ex), str(ex), ex.args))
-                    slog.error("%s" % str(traceback.format_exc()))
+                    slog.error("%s" % str(traceback.format_exc())) 
+            '''
         except Exception as ex:
             slog.error("Exception: %s   %s   %s" % (type(ex), str(ex), ex.args))
             slog.error("%s" % str(traceback.format_exc()))
             # reconnect to docker api server on swarm manager node
-            my_client = docker.DockerClient(base_url=docker_api_base_url)
+            docker_client = docker.DockerClient(base_url=docker_api_base_url)
+            '''
             worker_node_connected = False 
+            '''
         time.sleep(7)

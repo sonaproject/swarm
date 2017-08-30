@@ -6,11 +6,12 @@
   tasks:
     {% if delete -%} 
     - name: delete a docker network '{{ network_name }}'
-      # shell: docker network rm  {{ network_name }}
-      docker_network:
-        name: {{ network_name }}
-        state: absent
-        force: yes 
+      shell: docker network rm  {{ network_name }}
+## andrew: Don't use docker_network module. This module does not work.
+#      docker_network:
+#        name: {{ network_name }}
+#        state: absent
+#        force: yes 
     {% elif duplicated -%} 
     - name: network list on swarm cluster
       shell: docker network ls

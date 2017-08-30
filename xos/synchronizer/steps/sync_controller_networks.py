@@ -192,8 +192,14 @@ class SyncControllerNetworks(SwarmSyncStep):
 
     def map_delete_inputs(self, controller_network):
         # make sure to not delete a shared network
+        """
         if (controller_network.network.template.shared_network_name or controller_network.network.template.shared_network_id):
             return
+        """
+        swarm_manager_url = controller_network.controller.auth_url
+        (swarm_manager_address, docker_registry_port) = swarm_manager_url.split(':')
+        slog.info("swarm_manager_address: %s    docker_registry_port: %s" %
+                     (swarm_manager_address, docker_registry_port)) 
 
         try:
             slice = controller_network.network.owner
@@ -204,11 +210,12 @@ class SyncControllerNetworks(SwarmSyncStep):
         #subnet_name = '%s-%d'%(network_name,controller_network.pk)
         cidr = controller_network.subnet
         network_fields = {
-                        'network_name':network_name,
-                        'ansible_tag':'%s-%s@%s'%(
-                                                network_name,
-                                                slice.slicename,
-                                                controller_network.controller.name),
+                        'swarm_manager_address' : swarm_manager_address,
+                        'network_name'          :network_name,
+                        'ansible_tag'           :'%s-%s@%s'%(
+                                                    network_name,
+                                                    slice.slicename,
+                                                    controller_network.controller.name),
                         'delete':True
                         }
 
