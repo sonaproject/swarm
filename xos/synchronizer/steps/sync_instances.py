@@ -252,7 +252,7 @@ class SyncInstances(SwarmSyncStep):
                             'swarm_service_name'    : instance_name,
                             'network_name'          : swarm_network,
                             'replicas'              : "--replicas 1",
-                            'restart_condition'     : "--restart-condition on-failure  --restart-delay 9s ",
+                            'restart_condition'     : "--restart-condition any  --restart-delay 9s ",
                             'volume'                : volume_mount_opt,
                             'host_volume_path'      : host_volume_path,
                             'docker_registry_port'  : docker_registry_port,
