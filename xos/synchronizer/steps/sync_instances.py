@@ -316,25 +316,28 @@ class SyncInstances(SwarmSyncStep):
     def map_delete_inputs(self, instance):
         try:
             controller_register = json.loads(instance.node.site_deployment.controller.backend_register)
-            slog.info("controller_register: %s" % controller_register)
+            slog.debug("controller_register: %s" % controller_register)
 
             if (controller_register.get('disabled', False)):
                 slog.info('Controller %s is disabled' % instance.node.site_deployment.controller.name)
                 raise InnocuousException('Controller %s is disabled' % instance.node.site_deployment.controller.name)
 
             instance_name = '%s-%s-%d' % (instance.slice.service.name, instance.slice.name, instance.id)
-            slog.info("instance_name: %s" % instance_name)
+            slog.debug("instance_name: %s" % instance_name)
 
             controller = instance.node.site_deployment.controller
-            slog.info("controller: %s" % controller) 
+            slog.debug("controller: %s" % controller) 
             swarm_manager_url = controller.auth_url
-            slog.info("swarm_manager_url: %s" % swarm_manager_url)
+            slog.debug("swarm_manager_url: %s" % swarm_manager_url)
             (swarm_manager_address, docker_registry_port) = swarm_manager_url.split(':')
-            slog.info("swarm_manager_address: %s    docker_registry_port: %s" % (swarm_manager_address, docker_registry_port))
+            slog.debug("swarm_manager_address: %s    docker_registry_port: %s" % (swarm_manager_address, docker_registry_port))
+            volume_src_path = "/opt/xos/instance_volume/%s" % instance.id
+            slog.debug("volume_src_path: %s" % volume_src_path)
 
             input = {
                     'swarm_manager_address' : swarm_manager_address,
                     'swarm_service_name'    : instance_name,
+                    'volume_src_path'       : volume_src_path,
                     'ansible_tag'           : instance_name,
                     'delete'                : True
                     }

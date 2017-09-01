@@ -7,7 +7,10 @@
 
     - name: delete swarm service '{{ swarm_service_name }}'
       shell: docker service rm  {{ swarm_service_name }}
-
+    - name: remove the directory {{ volume_src_path }}
+      file:
+        path={{ volume_src_path }}
+        state=absent 
     {% elif duplicated -%}
 
     - name: Create host volume directory to share to docker container

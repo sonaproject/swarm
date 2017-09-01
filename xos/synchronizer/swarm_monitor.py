@@ -12,26 +12,6 @@ import synchronizers.swarm.swarmlog as slog
 import docker 
 
 
-def search_instance(container_name):
-    try:
-        instance_list = Instance.objects.all()
-        for instance in instance_list:
-            slog.debug("container_name: %s    service_name: %s" % (container_name, instance.instance_name))
-            if container_name.__contains__(instance.instance_name):
-                slog.debug("%s contains %s" % (container_name, instance.instance_name))
-                str_idx = container_name.find(instance.instance_name)
-                if str_idx == 0:  # If matching offset is 0.
-                    slog.debug("Matched record (%s, %s)" % (container_name, instance.instance_name))
-                    return instance
-        slog.debug("There is no instance tuple on XOS DB")
-        return None
-    except Exception as ex:
-        slog.error("Exception: %s   %s   %s" % (type(ex), str(ex), ex.args))
-        slog.error("%s" % str(traceback.format_exc()))
-        return None
-
-
-
 def search_port(network, instance):
     try:
         slog.debug("network: %s   instance: %s" % (network.name, instance.instance_name))
@@ -89,7 +69,7 @@ def get_worker_conn_list(docker_client):
                 docker_api_base_url = "tcp://%s:4243" % ip_addr
                 slog.debug("docker_api_base_url: %s" % docker_api_base_url) 
                 swarm_client = docker.DockerClient(base_url=docker_api_base_url)
-                swarm_node_conn_list.append(swarm_client)
+                swarm_node_conn_list.append({ "node_id": node.id, "hostname": hostname, "swarm_client": swarm_client }) 
             except Exception as ex:
                 slog.error("Exception: %s   %s   %s" % (type(ex), str(ex), ex.args))
                 slog.error("%s" % str(traceback.format_exc()))
@@ -101,8 +81,52 @@ def get_worker_conn_list(docker_client):
         slog.error("%s" % str(traceback.format_exc()))
         return None 
 
+def make_container_exec(swarm_client_dict, instance, container_id):
+    try:
+        # { "node_id": node.id, "hostname": nostname, "swarm_client": swarm_client }
+        slog.debug("(instance: %s)  swarm_client: %s (%s)   container_id: %s" % 
+                    (instance.instance_name, swarm_client_dict["hostname"], 
+                    swarm_client_dict["node_id"], container_id))
+        swarm_client = swarm_client_dict["swarm_client"]
+        container = swarm_client.containers.get(container_id)
+        userData = json.loads(instance.userData)
+        slog.debug("(instance: %s)  container name: %s   command: %s" % 
+                    (instance.instance_name, container.name, userData["command"])) 
+        exec_result = container.exec_run(userData["command"])
+        exec_result = exec_result.strip('\n')
+        slog.debug("%s container exec_result: %s" % (container.name, exec_result))
+        userData['result'] = exec_result
+        userData['update_date'] = time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime(time.time())) 
+        userData['node_name'] = swarm_client_dict["hostname"]
+        userData['node_id'] = swarm_client_dict["node_id"]
+        instance.userData = json.dumps(userData)
+        instance.save(update_fields=['userData']) 
+    except Exception as ex:
+        slog.error("Exception: %s   %s   %s" % (type(ex), str(ex), ex.args))
+        slog.error("%s" % str(traceback.format_exc())) 
+    return None
 
-def get_svc_info(docker_client):
+
+def get_svc_status(swarm_node_conn_list, instance, node_id, container_id):
+    slog.debug("(instance: %s) node_id: %s   container_id: %s" % 
+                (instance.instance_name, node_id, container_id))
+    try:
+        slog.debug("swarm client number: %s" % len(swarm_node_conn_list))
+        for swarm_client_dict in swarm_node_conn_list:
+            slog.debug("node search:  %s  vs  %s" % (swarm_client_dict["node_id"], node_id))
+            if swarm_client_dict["node_id"] == node_id:
+                # Run 'docker exec -it contain_name_a  service haproxy status'
+                slog.debug("Container command execution on node(%s)" % node_id)
+                make_container_exec(swarm_client_dict, instance, container_id)
+                return None
+        slog.error("Could not find node (%s)" % node_id)
+    except Exception as ex:
+        slog.error("Exception: %s   %s   %s" % (type(ex), str(ex), ex.args))
+        slog.error("%s" % str(traceback.format_exc())) 
+    return None
+
+
+def get_svc_info(docker_client, swarm_node_conn_list):
     task_filter = {'desired-state': 'running'} 
     instance_list = Instance.objects.all()
     for instance in instance_list:
@@ -111,7 +135,7 @@ def get_svc_info(docker_client):
             docker_svc = docker_client.services.get(instance.instance_name)
             docker_task_list = docker_svc.tasks(task_filter)
             if len(docker_task_list) == 0:
-                slog.debug("service(%s) doesn't have a running container" % instance.instance_name)                
+                slog.debug("service(%s) does not have a running container" % instance.instance_name)                
                 instance.backend_status = "2 - NOK : Docker container is not running"
                 instance.save(update_fields=['backend_status'])
                 continue
@@ -119,9 +143,12 @@ def get_svc_info(docker_client):
                 instance.backend_status = "1 - OK"
                 instance.save(update_fields=['backend_status'])
             docker_task = docker_task_list[0]
-            #slog.debug("(instance: %s) docker task information: %s" % (instance.instance_name, docker_task))
+            slog.debug("(instance: %s) docker task information: %s" % (instance.instance_name, docker_task))
             slog.debug("(instance: %s) Container Status : %s" % 
                             (instance.instance_name, docker_task["Status"]["State"])) 
+            slog.debug("(instance: %s) NodeID : %s" % (instance.instance_name, docker_task["NodeID"]))
+            get_svc_status(swarm_node_conn_list, instance, docker_task["NodeID"],
+                            docker_task["Status"]["ContainerStatus"]["ContainerID"])
             attached_network_list = docker_task["NetworksAttachments"]
             if len(attached_network_list) == 0:
                 slog.debug("Instance(%s) doesn't have a network" % instance.instance_name)
@@ -175,82 +202,19 @@ def monitor_thr(models_active):
     slog.debug("docker_api_base_url: %s" % docker_api_base_url)
     docker_client = docker.DockerClient(base_url=docker_api_base_url)
 
-    '''
     worker_node_connected = False 
-    '''
     swarm_node_conn_list = []
     while True:
         try: 
-            get_svc_info(docker_client)
-
-            '''
             # To extract swarm node connection list from swarm manager
             if worker_node_connected == False:
                 swarm_node_conn_list = get_worker_conn_list(docker_client) 
-                worker_node_connected = True
-
-            # To extract network list from core_network model  
-            network_list = Network.objects.all()
-            for network in network_list:
-                try: 
-                    # To get docker network information from swarm manager
-                    slog.debug("network.name: %s" % network.name)
-                    for swarm_client in swarm_node_conn_list:
-                        try:
-                            docker_net = swarm_client.networks.get(network.name)
-                            container_list = docker_net.attrs['Containers'].values()
-
-                            # To extract ip address and container name which uses its network
-                            for container in container_list:
-                                slog.debug("Container name: %s" % container["Name"])
-                                slog.debug("IPv4          : %s" % container["IPv4Address"]) 
-                                ip_addr = transform_ip_addr(container["IPv4Address"]) 
-
-                                # To search instance name with container["Name"]
-                                instance = search_instance(container["Name"])
-                                if instance is None:
-                                    slog.debug("%s is not container which is created by XOS" % container["Name"])
-                                    continue 
-
-                                # Check if same port tuple is on core_port.
-                                port_info = search_port(network, instance)
-                                if port_info is not None:  # port already exists
-                                    if port_info.ip == ip_addr: 
-                                        continue  # Nothing to do:
-                                    else :
-                                        # renew port information
-                                        port_info.ip =  ip_addr
-                                        port_info.mac = container["MacAddress"]
-                                        port_info.save()
-                                        slog.debug("(%s, %s) renew port information (%s)" % 
-                                                    (instance.instance_name, network.name, port_info.ip))
-
-                                slog.debug("instance name: %s   instance_id: %s   network_id: %s" % 
-                                            (instance.instance_name, instance.id, network.id))
-                                # To insert port tuple on core_port model 
-                                new_port = Port()
-                                new_port.ip      = ip_addr
-                                new_port.mac     = container["MacAddress"]
-                                new_port.leaf_model_name = "Port"
-                                new_port.xos_created = True
-                                new_port.instance_id = instance.id
-                                new_port.network_id  = network.id
-                                new_port.save() 
-                                slog.debug("(%s, %s) renew port information (%s)" % 
-                                            (instance.instance_name, network.name, new_port.ip)) 
-                        except Exception as ex:
-                            slog.error("Exception: %s   %s   %s" % (type(ex), str(ex), ex.args))
-                            slog.error("%s" % str(traceback.format_exc())) 
-                except Exception as ex:
-                    slog.error("Exception: %s   %s   %s" % (type(ex), str(ex), ex.args))
-                    slog.error("%s" % str(traceback.format_exc())) 
-            '''
+                worker_node_connected = True 
+            get_svc_info(docker_client, swarm_node_conn_list) 
         except Exception as ex:
             slog.error("Exception: %s   %s   %s" % (type(ex), str(ex), ex.args))
             slog.error("%s" % str(traceback.format_exc()))
             # reconnect to docker api server on swarm manager node
             docker_client = docker.DockerClient(base_url=docker_api_base_url)
-            '''
             worker_node_connected = False 
-            '''
         time.sleep(7)

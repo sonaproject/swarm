@@ -14,11 +14,14 @@ class SyncControllerImages(SwarmSyncStep):
     requested_interval=0
     playbook='sync_controller_images.yaml' 
 
+
     def fetch_pending(self, deleted):
+        """
         if (deleted):
             return []
-
+        """ 
         return super(SyncControllerImages, self).fetch_pending(deleted) 
+
 
     def map_sync_inputs(self, controller_image):
         swarm_manager_url = controller_image.controller.auth_url
@@ -33,6 +36,7 @@ class SyncControllerImages(SwarmSyncStep):
                         'image_dir'             : os.path.dirname(controller_image.image.path),
                         'image_name'            : controller_image.image.name,
                         'image_tag'             : controller_image.image.tag, 
+                        'delete'                : False,
                         'ansible_tag': '%s@%s'%(
                                                 controller_image.image.name,
                                                 controller_image.controller.name)  # name of ansible playbook
@@ -40,6 +44,7 @@ class SyncControllerImages(SwarmSyncStep):
         slog.info("input_fields: %s" % str(input_fields))
 
         return input_fields 
+
 
     def map_sync_outputs(self, controller_image, res):
         slog.debug("Ansible playbook result: %s" % str(res))
@@ -50,3 +55,38 @@ class SyncControllerImages(SwarmSyncStep):
         else:
             controller_image.backend_status = '2 - Ansible playbook failure'
         controller_image.save()
+
+
+# TODO  
+    def map_delete_inputs(self, controller_image):
+        try:
+            controller_register = json.loads(instance.node.site_deployment.controller.backend_register)
+            slog.debug("controller_register: %s" % controller_register)
+
+            if (controller_register.get('disabled', False)):
+                slog.info('Controller %s is disabled' % instance.node.site_deployment.controller.name)
+                raise InnocuousException('Controller %s is disabled' % instance.node.site_deployment.controller.name) 
+            
+            swarm_manager_url = controller_image.controller.auth_url
+            (swarm_manager_address, docker_registry_port) = swarm_manager_url.split(':')
+            slog.info("swarm_manager_address: %s    docker_registry_port: %s" % 
+                        (swarm_manager_address, docker_registry_port)) 
+
+            input_fields = {
+                            'swarm_manager_address' : swarm_manager_address,
+                            'docker_registry_port'  : docker_registry_port,
+                            'image_file_path'       : controller_image.image.path,
+                            'image_dir'             : os.path.dirname(controller_image.image.path),
+                            'image_name'            : controller_image.image.name,
+                            'image_tag'             : controller_image.image.tag, 
+                            'delete'                : True,
+                            'ansible_tag': '%s@%s'%(
+                                                    controller_image.image.name,
+                                                    controller_image.controller.name)  # name of ansible playbook
+                            } 
+            slog.info("input_fields: %s" % str(input_fields))
+            return input_fields 
+        except Exception as ex:
+            slog.error("Exception: %s   %s   %s" % (type(ex), str(ex), ex.args))
+            slog.error("%s" % str(traceback.format_exc()))
+

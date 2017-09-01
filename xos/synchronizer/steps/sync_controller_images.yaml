@@ -4,6 +4,9 @@
 - hosts: {{ swarm_manager_address }}
   become: true
   tasks:
+
+    {% if not delete -%}
+
     - name: make a directory for swarm archive image
       file:
         path: {{ image_dir }}
@@ -25,4 +28,10 @@
     - name: Inspect a image
       docker_image_facts:
         name: {{ swarm_manager_address }}:{{ docker_registry_port }}/{{ image_name }}:{{ image_tag }}
+
+    {% else -%}
+# TODO
+
+
+    {% endif %}
 
