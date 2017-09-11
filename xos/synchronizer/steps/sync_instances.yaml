@@ -7,18 +7,19 @@
 
     - name: delete swarm service '{{ swarm_service_name }}'
       shell: docker service rm  {{ swarm_service_name }}
-    - name: remove the directory {{ volume_src_path }}
-      file:
-        path={{ volume_src_path }}
-        state=absent 
-    {% elif duplicated -%}
-
-    - name: Create host volume directory to share to docker container
+    - name: remove the directory {{ host_volume_path }}
       file:
         path={{ host_volume_path }}
-        state=directory 
-    - name: get status of '{{ swarm_service_name }}' service
-      shell: docker service ps {{ swarm_service_name }} 
+        state=absent 
+
+#    {% elif duplicated -%}
+#
+#    - name: Create host volume directory to share to docker container
+#      file:
+#        path={{ host_volume_path }}
+#        state=directory 
+#    - name: get status of '{{ swarm_service_name }}' service
+#      shell: docker service ps {{ swarm_service_name }} 
 
     {% elif update -%}
 
@@ -28,8 +29,15 @@
         state=directory 
     - name: update swarm service '{{ swarm_service_name }}'
       shell: docker service update  --force  {{ volume }} {{ swarm_service_name }}
+    - name: get status of '{{ swarm_service_name }}' service
+      shell: docker service ps {{ swarm_service_name }} 
 
-    {% else -%}
+    {% else -%} 
+
+    - name: remove the directory {{ host_volume_path }}
+      file:
+        path={{ host_volume_path }}
+        state=absent 
     - name: Create host volume directory to share to docker container
       file:
         path={{ host_volume_path }}

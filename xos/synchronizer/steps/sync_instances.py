@@ -283,9 +283,9 @@ class SyncInstances(SwarmSyncStep):
     def map_sync_outputs(self, instance, res):
         try:
             slog.info("ansible playbook ressult: %s" % str(res))
-            slog.info("ansible playbook ressult[1][stdout]: %s" % str(res[1]['stdout']))
+            slog.info("ansible playbook ressult[3][stdout]: %s" % str(res[3]['stdout']))
 
-            res_stdout = res[2]['stdout']
+            res_stdout = res[3]['stdout']
             json_content = json.loads(res_stdout)
             slog.info("json_content: %s" % str(json_content))
             instance.instance_id = json_content[0]['Spec']["Name"]
@@ -331,13 +331,13 @@ class SyncInstances(SwarmSyncStep):
             slog.debug("swarm_manager_url: %s" % swarm_manager_url)
             (swarm_manager_address, docker_registry_port) = swarm_manager_url.split(':')
             slog.debug("swarm_manager_address: %s    docker_registry_port: %s" % (swarm_manager_address, docker_registry_port))
-            volume_src_path = "/opt/xos/instance_volume/%s" % instance.id
-            slog.debug("volume_src_path: %s" % volume_src_path)
+            host_volume_path = "/opt/xos/instance_volume/%s" % instance.id
+            slog.debug("host_volume_path: %s" % host_volume_path)
 
             input = {
                     'swarm_manager_address' : swarm_manager_address,
                     'swarm_service_name'    : instance_name,
-                    'volume_src_path'       : volume_src_path,
+                    'host_volume_path'      : host_volume_path,
                     'ansible_tag'           : instance_name,
                     'delete'                : True
                     }

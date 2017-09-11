@@ -14,8 +14,8 @@ DATA=$(cat <<EOF
     "labels": "6a170103-1c48-4333-a8ae-c7b55736c6d8",
     "permit_all_slices": true,
     "autoconnect": false,
-    "template": "http://10.10.2.240/api/core/networktemplates/6/",
-    "owner": "http://10.10.2.240/api/core/slices/3/"
+    "template": "http://10.10.2.240/api/core/networktemplates/5/",
+    "owner": "http://10.10.2.240/api/core/slices/2/"
 }
 EOF
 ) 
