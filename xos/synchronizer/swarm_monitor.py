@@ -89,18 +89,26 @@ def make_container_exec(swarm_client_dict, instance, container_id):
                     swarm_client_dict["node_id"], container_id))
         swarm_client = swarm_client_dict["swarm_client"]
         container = swarm_client.containers.get(container_id)
-        userData = json.loads(instance.userData)
+        tag = Tag.objects.get(
+                                object_id    = instance.id,
+                                name         = "chk_container_status",
+                             )
+        slog.debug("tag.value: %s" % tag.value)
+        chk_container_status = json.loads(tag.value)
+        #userData = json.loads(instance.userData)
         slog.debug("(instance: %s)  container name: %s   command: %s" % 
-                    (instance.instance_name, container.name, userData["command"])) 
-        exec_result = container.exec_run(userData["command"])
+                    (instance.instance_name, container.name, chk_container_status["command"])) 
+        exec_result = container.exec_run(chk_container_status["command"])
         exec_result = exec_result.strip('\n')
         slog.debug("%s container exec_result: %s" % (container.name, exec_result))
-        userData['result'] = exec_result
-        userData['update_date'] = time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime(time.time())) 
-        userData['node_name'] = swarm_client_dict["hostname"]
-        userData['node_id'] = swarm_client_dict["node_id"]
-        instance.userData = json.dumps(userData)
-        instance.save(update_fields=['userData']) 
+        chk_container_status['result'] = exec_result
+        chk_container_status['update_date'] = time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime(time.time())) 
+        chk_container_status['node_name'] = swarm_client_dict["hostname"]
+        chk_container_status['node_id'] = swarm_client_dict["node_id"]
+        tag.value = json.dumps(chk_container_status)
+        tag.save(update_fields=['value'])
+        #instance.userData = json.dumps(userData)
+        #instance.save(update_fields=['userData']) 
     except Exception as ex:
         slog.error("Exception: %s   %s   %s" % (type(ex), str(ex), ex.args))
         slog.error("%s" % str(traceback.format_exc())) 
