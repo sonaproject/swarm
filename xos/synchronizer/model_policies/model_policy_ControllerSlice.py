@@ -10,9 +10,9 @@ class ControllerSlicePolicy(Policy):
 
     def handle_update(self, controller_slice):
         self.logger.info("controller_slice: %s" % str(controller_slice))
-        my_status_code = int(controller_slice.backend_status[0])
+        my_status_code = controller_slice.backend_code
         try:
-            his_status_code = int(controller_slice.slice.backend_status[0])
+            his_status_code = controller_slice.slice.backend_code
         except:
             his_status_code = 0
  
@@ -25,7 +25,4 @@ class ControllerSlicePolicy(Policy):
             controller_slice.slice.backend_register = controller_slice.backend_register
             fields+=['backend_register']
 
-        self.logger.info("controller_slice.backend_status       : %s" % controller_slice.backend_status[0])
-        self.logger.info("controller_slice.slice.backend_status : %s" % controller_slice.slice.backend_status[0])
-        self.logger.info("fields                                : %s" % str(fields))
         controller_slice.slice.save(update_fields = fields)

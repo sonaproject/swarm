@@ -144,12 +144,14 @@ def get_svc_info(docker_client, swarm_node_conn_list):
             docker_task_list = docker_svc.tasks(task_filter)
             if len(docker_task_list) == 0:
                 slog.debug("service(%s) does not have a running container" % instance.instance_name)                
-                instance.backend_status = "2 - NOK : Docker container is not running"
-                instance.save(update_fields=['backend_status'])
+                instance.backend_code   = 2
+                instance.backend_status = "NOK : Docker container is not running"
+                instance.save(update_fields=['backend_code', 'backend_status'])
                 continue
-            if instance.backend_status != "1 - OK":
-                instance.backend_status = "1 - OK"
-                instance.save(update_fields=['backend_status'])
+            if instance.backend_code != 1:
+                instance.backend_code   = 1
+                instance.backend_status = "OK"
+                instance.save(update_fields=['backend_code', 'backend_status'])
             docker_task = docker_task_list[0]
             slog.debug("(instance: %s) docker task information: %s" % (instance.instance_name, docker_task))
             slog.debug("(instance: %s) Container Status : %s" % 
@@ -198,8 +200,9 @@ def get_svc_info(docker_client, swarm_node_conn_list):
         except Exception as ex:
             slog.error("Exception: %s   %s   %s" % (type(ex), str(ex), ex.args))
             slog.error("%s" % str(traceback.format_exc()))
-            instance.backend_status = "2 - NOK : %s service is not running (%s)" % (instance.instance_name, str(ex))
-            instance.save(update_fields=['backend_status'])
+            instance.backend_code   = 2
+            instance.backend_status = "NOK : %s service is not running (%s)" % (instance.instance_name, str(ex))
+			instance.save(update_fields=['backend_code', 'backend_status'])
 
 
 def monitor_thr(models_active):

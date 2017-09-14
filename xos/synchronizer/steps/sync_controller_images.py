@@ -51,9 +51,11 @@ class SyncControllerImages(SwarmSyncStep):
         slog.debug("Ansible playbook result[4]['image']['Id']: %s" % str(res[4]['image']['Id']))
         controller_image.glance_image_id = str(res[4]['image']['Id'])
         if len(controller_image.glance_image_id) > 2:
-            controller_image.backend_status = '1 - OK'
+            controller_image.backend_status = 'OK'
+            controller_image.backend_code   = 1
         else:
-            controller_image.backend_status = '2 - Ansible playbook failure'
+            controller_image.backend_status = 'Ansible playbook failure'
+            controller_image.backend_code   = 2
         controller_image.save()
 
 

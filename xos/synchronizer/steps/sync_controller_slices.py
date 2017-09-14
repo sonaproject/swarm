@@ -53,7 +53,8 @@ class SyncControllerSlices(SwarmSyncStep):
 
 
     def map_sync_outputs(self, controller_slice, res):
-        controller_slice.backend_status = '1 - OK'
+        controller_slice.backend_status = 'OK'
+        controller_slice.backend_code   = 1
         controller_slice.save() 
 
 

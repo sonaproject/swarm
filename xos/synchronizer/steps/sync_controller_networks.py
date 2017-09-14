@@ -186,7 +186,8 @@ class SyncControllerNetworks(SwarmSyncStep):
         controller_network.net_id = network_id
         controller_network.subnet = self.cidr
         controller_network.subnet_id = subnet_id
-        controller_network.backend_status = '1 - OK'
+        controller_network.backend_status = 'OK'
+        controller_network.backend_code   = 1
 
         controller_network.save()
 
