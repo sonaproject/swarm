@@ -4,7 +4,8 @@ from xos.logger import Logger, logging, logger
 from os.path import basename 
 
 #logger = Logger(level=logging.INFO)
-logger = Logger('/var/log/swarm_sync.log', loggername='DEBUG', level=logging.DEBUG)
+logger = Logger('/var/log/swarm_sync.log')
+logger.setLevel(logging.DEBUG)
 
 
 def debug(msg):

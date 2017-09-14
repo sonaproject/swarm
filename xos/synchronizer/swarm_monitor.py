@@ -4,10 +4,10 @@ import json
 import time
 import sys, traceback
 
-import synchronizers.swarm.swarmlog as slog 
-#from xos.logger import observer_logger as logger
 from synchronizers.new_base.modelaccessor import *
 
+import synchronizers.swarm.swarmlog as slog 
+#from xos.logger import observer_logger as logger
 
 import docker 
 
@@ -202,7 +202,7 @@ def get_svc_info(docker_client, swarm_node_conn_list):
             slog.error("%s" % str(traceback.format_exc()))
             instance.backend_code   = 2
             instance.backend_status = "NOK : %s service is not running (%s)" % (instance.instance_name, str(ex))
-			instance.save(update_fields=['backend_code', 'backend_status'])
+            instance.save(update_fields=['backend_code', 'backend_status'])
 
 
 def monitor_thr(models_active):

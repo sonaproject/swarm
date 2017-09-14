@@ -14,12 +14,13 @@ os.environ.setdefault("DJANGO_SETTINGS_MODULE", "xos.settings")
 
 import threading 
 import time 
-import swarmlog as slog
-import swarm_monitor
 
 from synchronizers.new_base.modelaccessor import *
 from synchronizers.new_base.backend import Backend
 from synchronizers.new_base.event_loop import set_driver
+
+import swarmlog as slog
+import swarm_monitor
 
 
 def main():
