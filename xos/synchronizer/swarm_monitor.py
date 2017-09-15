@@ -5,7 +5,6 @@ import time
 import sys, traceback
 
 import synchronizers.swarm.swarmlog as slog 
-#from xos.logger import observer_logger as logger
 from synchronizers.new_base.modelaccessor import *
 
 
