@@ -22,7 +22,6 @@ DATA=$(cat <<EOF
 EOF
 )
 
-curl -X POST -u $AUTH --header 'Content-Type: application/json' --header 'Accept: text/html' -d "$DATA"  ${BASE_URL}/xosapi/v1/core/networks
 result_msg=`curl -X POST -u $AUTH --header 'Content-Type: application/json' --header 'Accept: text/html' -d "$DATA"  ${BASE_URL}/xosapi/v1/core/networks`
 echo $result_msg | python -m json.tool
 echo ""
