@@ -5,7 +5,8 @@ import threading
 import time 
 import sys, traceback
 
-from synchronizers.swarm.swarmsyncstep import SwarmSyncStep
+#from synchronizers.swarm.swarmsyncstep import SwarmSyncStep
+from synchronizers.new_base.syncstep import SyncStep
 from synchronizers.new_base.ansible_helper import *
 from synchronizers.new_base.syncstep import *
 from xos.logger import observer_logger as logger
@@ -16,7 +17,8 @@ import synchronizers.swarm.swarmlog as slog
 RESTAPI_HOSTNAME = socket.gethostname()
 RESTAPI_PORT = "8000"
 
-class SyncInstances(SwarmSyncStep):
+#class SyncInstances(SwarmSyncStep):
+class SyncInstances(SyncStep):
     provides = [Instance]
     requested_interval = 0
     observes = Instance

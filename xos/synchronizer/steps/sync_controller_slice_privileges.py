@@ -1,7 +1,8 @@
 import os
 import base64
 import json
-from synchronizers.swarm.swarmsyncstep import SwarmSyncStep
+#from synchronizers.swarm.swarmsyncstep import SwarmSyncStep
+from synchronizers.new_base.syncstep import SyncStep
 from synchronizers.new_base.syncstep import *
 from synchronizers.new_base.ansible_helper import *
 from xos.logger import observer_logger as logger
@@ -9,7 +10,8 @@ from synchronizers.new_base.modelaccessor import *
 
 import synchronizers.swarm.swarmlog as slog
 
-class SyncControllerSlicePrivileges(SwarmSyncStep):
+#class SyncControllerSlicePrivileges(SwarmSyncStep):
+class SyncControllerSlicePrivileges(SyncStep):
     provides=[SlicePrivilege]
     requested_interval=0
     observes=ControllerSlicePrivilege

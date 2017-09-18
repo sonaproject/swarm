@@ -1,6 +1,7 @@
 import os
 import base64
-from synchronizers.swarm.swarmsyncstep import SwarmSyncStep
+#from synchronizers.swarm.swarmsyncstep import SwarmSyncStep
+from synchronizers.swarm.swarmsyncstep import SyncStep
 from synchronizers.new_base.syncstep import *
 from synchronizers.new_base.ansible_helper import *
 import json
@@ -9,7 +10,8 @@ from xos.logger import observer_logger as logger
 
 import synchronizers.swarm.swarmlog as slog 
 
-class SyncControllerSites(SwarmSyncStep):
+#class SyncControllerSites(SwarmSyncStep):
+class SyncControllerSites(SyncStep):
     requested_interval=0
     provides=[Site]
     observes=ControllerSite

@@ -3,7 +3,8 @@ import base64
 import struct
 import socket
 from netaddr import IPAddress, IPNetwork
-from synchronizers.swarm.swarmsyncstep import SwarmSyncStep
+#from synchronizers.swarm.swarmsyncstep import SwarmSyncStep
+from synchronizers.new_base.syncstep import SyncStep
 from synchronizers.new_base.syncstep import *
 from xos.logger import observer_logger as logger
 from synchronizers.new_base.ansible_helper import *
@@ -11,7 +12,8 @@ from synchronizers.new_base.modelaccessor import *
 
 import synchronizers.swarm.swarmlog as slog 
 
-class SyncControllerNetworks(SwarmSyncStep):
+#class SyncControllerNetworks(SwarmSyncStep):
+class SyncControllerNetworks(SyncStep):
     requested_interval = 0
     provides=[Network]
     observes=ControllerNetwork

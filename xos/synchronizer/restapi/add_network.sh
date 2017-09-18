@@ -3,7 +3,7 @@
 source ./config.sh
 
 # Be careful that start_ip means 'gateway ip address'
-# Be carefule that labels means 'UUID of subnet pool'
+# Be careful that labels means 'UUID of subnet pool'
 DATA=$(cat <<EOF 
 {
     "name": "kuryr-test",
