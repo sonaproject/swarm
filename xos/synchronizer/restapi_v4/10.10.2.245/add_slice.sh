@@ -12,6 +12,7 @@ DATA=$(cat <<EOF
    "mount_data_sets": "/usr/local/etc/haproxy/",
    "default_flavor_id": 1,
    "name": "mysite_lbaas",
+   "network": "noauto",
    "default_isolation": "vm",
    "enabled": true,
    "service_id": 1

@@ -1,3 +1,19 @@
+
+# Copyright 2017-present Open Networking Foundation
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+
 import os
 import base64
 import json
@@ -83,7 +99,6 @@ def get_worker_conn_list(docker_client):
 
 def make_container_exec(swarm_client_dict, instance, container_id):
     try:
-        # { "node_id": node.id, "hostname": nostname, "swarm_client": swarm_client }
         slog.debug("(instance: %s)  swarm_client: %s (%s)   container_id: %s" % 
                     (instance.instance_name, swarm_client_dict["hostname"], 
                     swarm_client_dict["node_id"], container_id))
@@ -95,7 +110,6 @@ def make_container_exec(swarm_client_dict, instance, container_id):
                              )
         slog.debug("tag.value: %s" % tag.value)
         chk_container_status = json.loads(tag.value)
-        #userData = json.loads(instance.userData)
         slog.debug("(instance: %s)  container name: %s   command: %s" % 
                     (instance.instance_name, container.name, chk_container_status["command"])) 
         exec_result = container.exec_run(chk_container_status["command"])
@@ -107,8 +121,6 @@ def make_container_exec(swarm_client_dict, instance, container_id):
         chk_container_status['node_id'] = swarm_client_dict["node_id"]
         tag.value = json.dumps(chk_container_status)
         tag.save(update_fields=['value'])
-        #instance.userData = json.dumps(userData)
-        #instance.save(update_fields=['userData']) 
     except Exception as ex:
         slog.error("Exception: %s   %s   %s" % (type(ex), str(ex), ex.args))
         slog.error("%s" % str(traceback.format_exc())) 
